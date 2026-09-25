@@ -1,5 +1,6 @@
 import { App, Modal, PluginSettingTab, Setting } from "obsidian";
 import { normalizeServerUrl, type VaultInfo } from "./engine/client";
+import { LANGUAGES, t } from "./i18n";
 import type ObsiSyncPlugin from "./main";
 
 interface Choice {
@@ -41,13 +42,12 @@ export class ConfirmModal extends Modal {
 	}
 }
 
-const ROLE: Record<string, string> = { owner: "vlastník", editor: "úpravy", viewer: "jen čtení" };
-
 export class ObsiSyncSettingTab extends PluginSettingTab {
 	private error = "";
 	private busy = false;
 	private vaults: VaultInfo[] | null = null;
 	private canCreate = false;
+	private statusEl: HTMLElement | null = null;
 
 	constructor(
 		app: App,
@@ -70,6 +70,7 @@ export class ObsiSyncSettingTab extends PluginSettingTab {
 		else if (s.vaultId === null) this.vaultPicker();
 		else this.connectedView();
 		if (this.error) containerEl.createDiv({ cls: "obsisync-error", text: this.error });
+		this.languagePicker();
 	}
 
 	private async run(fn: () => Promise<void>) {
@@ -85,41 +86,58 @@ export class ObsiSyncSettingTab extends PluginSettingTab {
 		this.display();
 	}
 
+	private languagePicker() {
+		new Setting(this.containerEl)
+			.setName(t("settings.language"))
+			.setDesc(t("settings.languageDesc"))
+			.addDropdown((d) => {
+				d.addOption("auto", t("settings.languageAuto"));
+				for (const l of LANGUAGES) d.addOption(l.code, l.name);
+				d.setValue(this.plugin.settings.language).onChange(async (v) => {
+					await this.plugin.setLanguage(v);
+					this.display();
+				});
+			});
+	}
+
 	// ---- step 1: server, name, password ----
 
 	private loginForm() {
 		const el = this.containerEl;
-		el.createEl("p", { text: "Vyplň adresu svého ObsiSync serveru a své přihlašovací údaje." });
+		el.createEl("p", { text: t("login.intro") });
 		let url = this.plugin.settings.serverUrl;
 		let user = this.plugin.settings.username;
 		let pass = "";
-		new Setting(el).setName("Adresa serveru").setDesc("Např. https://sync.mojedomena.cz nebo 192.168.1.10:8080").addText((t) =>
-			t
-				.setPlaceholder("https://…")
-				.setValue(url)
-				.onChange((v) => (url = v)),
-		);
-		new Setting(el).setName("Jméno").addText((t) => {
-			t.setValue(user).onChange((v) => (user = v));
-			t.inputEl.autocapitalize = "off";
-			t.inputEl.autocomplete = "username";
+		new Setting(el)
+			.setName(t("login.server"))
+			.setDesc(t("login.serverDesc"))
+			.addText((c) =>
+				c
+					.setPlaceholder("https://…")
+					.setValue(url)
+					.onChange((v) => (url = v)),
+			);
+		new Setting(el).setName(t("login.name")).addText((c) => {
+			c.setValue(user).onChange((v) => (user = v));
+			c.inputEl.autocapitalize = "off";
+			c.inputEl.autocomplete = "username";
 		});
 		const submit = () =>
 			this.run(async () => {
 				const server = normalizeServerUrl(url);
-				if (!server || !user || !pass) throw new Error("Vyplň adresu serveru, jméno i heslo.");
+				if (!server || !user || !pass) throw new Error(t("login.missing"));
 				await this.plugin.login(server, user.trim(), pass);
 				this.vaults = null;
 			});
-		new Setting(el).setName("Heslo").addText((t) => {
-			t.inputEl.type = "password";
-			t.inputEl.autocomplete = "current-password";
-			t.onChange((v) => (pass = v));
-			t.inputEl.addEventListener("keydown", (e) => e.key === "Enter" && submit());
+		new Setting(el).setName(t("login.password")).addText((c) => {
+			c.inputEl.type = "password";
+			c.inputEl.autocomplete = "current-password";
+			c.onChange((v) => (pass = v));
+			c.inputEl.addEventListener("keydown", (e) => e.key === "Enter" && submit());
 		});
 		new Setting(el).addButton((b) =>
 			b
-				.setButtonText(this.busy ? "Přihlašuji…" : "Přihlásit")
+				.setButtonText(this.busy ? t("login.busy") : t("login.button"))
 				.setCta()
 				.setDisabled(this.busy)
 				.onClick(submit),
@@ -131,9 +149,9 @@ export class ObsiSyncSettingTab extends PluginSettingTab {
 	private account(el: HTMLElement) {
 		const s = this.plugin.settings;
 		new Setting(el)
-			.setName(`Přihlášen(a) jako ${s.username}`)
+			.setName(t("account.loggedIn", { user: s.username }))
 			.setDesc(s.serverUrl)
-			.addButton((b) => b.setButtonText("Odhlásit").onClick(() => this.run(() => this.plugin.logout())));
+			.addButton((b) => b.setButtonText(t("account.logout")).onClick(() => this.run(() => this.plugin.logout())));
 	}
 
 	private vaultPicker() {
@@ -141,7 +159,7 @@ export class ObsiSyncSettingTab extends PluginSettingTab {
 		this.account(el);
 		const refresh = () =>
 			new Setting(el).addButton((b) =>
-				b.setButtonText("Obnovit seznam").onClick(() => {
+				b.setButtonText(t("vaults.refresh")).onClick(() => {
 					this.vaults = null;
 					this.error = "";
 					this.display();
@@ -152,7 +170,7 @@ export class ObsiSyncSettingTab extends PluginSettingTab {
 				refresh();
 				return;
 			}
-			el.createEl("p", { text: "Načítám seznam vaultů…" });
+			el.createEl("p", { text: t("vaults.loading") });
 			if (!this.busy) {
 				void this.run(async () => {
 					const r = await this.plugin.client().vaults();
@@ -166,36 +184,36 @@ export class ObsiSyncSettingTab extends PluginSettingTab {
 		let selected = vaults[0]?.id;
 		if (vaults.length) {
 			new Setting(el)
-				.setName("Vault na serveru")
-				.setDesc("Vyber, který vault se má synchronizovat s tímto vaultem v Obsidianu.")
+				.setName(t("vaults.label"))
+				.setDesc(t("vaults.desc"))
 				.addDropdown((d) => {
-					for (const v of vaults) d.addOption(String(v.id), `${v.name} (${ROLE[v.role] ?? v.role})`);
+					for (const v of vaults) d.addOption(String(v.id), `${v.name} (${t(`role.${v.role}`)})`);
 					d.onChange((v) => (selected = Number(v)));
 				})
 				.addButton((b) =>
 					b
-						.setButtonText("Připojit")
+						.setButtonText(t("vaults.connect"))
 						.setCta()
 						.setDisabled(this.busy)
 						.onClick(() => this.connect(vaults.find((v) => v.id === selected)!)),
 				);
 		} else {
-			el.createEl("p", { text: "Tvůj účet zatím nemá přístup k žádnému vaultu." });
+			el.createEl("p", { text: t("vaults.none") });
 		}
 		if (this.canCreate) {
 			let name = this.app.vault.getName();
 			new Setting(el)
-				.setName("Nebo vytvoř nový vault z tohoto")
-				.setDesc("Na serveru vznikne nový vault a nahraje se do něj obsah tohoto vaultu.")
-				.addText((t) => t.setValue(name).onChange((v) => (name = v)))
+				.setName(t("vaults.create"))
+				.setDesc(t("vaults.createDesc"))
+				.addText((c) => c.setValue(name).onChange((v) => (name = v)))
 				.addButton((b) =>
 					b
-						.setButtonText("Vytvořit a připojit")
+						.setButtonText(t("vaults.createButton"))
 						.setDisabled(this.busy)
 						.onClick(() =>
 							this.run(async () => {
 								const v = await this.plugin.client().createVault(name.trim());
-								await this.plugin.connect(v, false);
+								await this.plugin.connect(v);
 							}),
 						),
 				);
@@ -203,28 +221,23 @@ export class ObsiSyncSettingTab extends PluginSettingTab {
 		refresh();
 	}
 
+	/**
+	 * A server vault with content always wins: this vault becomes its copy.
+	 * Confirm first when that would move local notes to the trash.
+	 */
 	private connect(vault: VaultInfo) {
-		const localFiles = this.app.vault.getFiles().length;
-		if (localFiles === 0 || vault.head_rev === 0) {
-			void this.run(() => this.plugin.connect(vault, false));
+		const serverHasContent = (vault.file_count ?? vault.head_rev) > 0;
+		if (!serverHasContent || this.app.vault.getFiles().length === 0) {
+			void this.run(() => this.plugin.connect(vault));
 			return;
 		}
-		new ConfirmModal(
-			this.app,
-			`Připojit k „${vault.name}“`,
-			`Tento vault už obsahuje ${localFiles} souborů a vault na serveru také není prázdný.\n\n` +
-				"Sloučit: soubory z obou stran zůstanou, rozdílné verze se sloučí nebo uloží jako konfliktní kopie.\n" +
-				"Server má přednost: u rozdílných souborů vyhraje verze ze serveru; soubory, které jsou jen tady, se nahrají.",
-			[
-				{ label: "Sloučit (doporučeno)", cta: true, action: () => void this.run(() => this.plugin.connect(vault, false)) },
-				{ label: "Server má přednost", action: () => void this.run(() => this.plugin.connect(vault, true)) },
-			],
-		).open();
+		new ConfirmModal(this.app, t("replace.title", { vault: vault.name }), t("replace.body"), [
+			{ label: t("replace.confirm"), cta: true, action: () => void this.run(() => this.plugin.connect(vault)) },
+			{ label: t("replace.cancel"), action: () => {} },
+		]).open();
 	}
 
 	// ---- step 3: connected ----
-
-	private statusEl: HTMLElement | null = null;
 
 	private statusLine() {
 		if (!this.statusEl) return;
@@ -237,27 +250,32 @@ export class ObsiSyncSettingTab extends PluginSettingTab {
 		const el = this.containerEl;
 		const s = this.plugin.settings;
 		new Setting(el)
-			.setName(`Připojeno k vaultu „${s.vaultName}“`)
+			.setName(t("connected.title", { vault: s.vaultName }))
 			.setDesc(`${s.username} @ ${s.serverUrl}`)
-			.addButton((b) => b.setButtonText("Synchronizovat nyní").setCta().onClick(() => this.plugin.requestSync(0)));
+			.addButton((b) =>
+				b
+					.setButtonText(t("connected.syncNow"))
+					.setCta()
+					.onClick(() => this.plugin.requestSync(0)),
+			);
 		this.statusEl = el.createDiv({ cls: "obsisync-statusline" });
 		this.statusLine();
 
 		new Setting(el)
-			.setName("Synchronizovat i nastavení Obsidianu")
-			.setDesc("Složka .obsidian (vzhled, pluginy, klávesové zkratky). Změny se projeví po restartu Obsidianu.")
-			.addToggle((t) =>
-				t.setValue(s.syncConfig).onChange(async (v) => {
+			.setName(t("connected.syncConfig"))
+			.setDesc(t("connected.syncConfigDesc"))
+			.addToggle((c) =>
+				c.setValue(s.syncConfig).onChange(async (v) => {
 					s.syncConfig = v;
 					await this.plugin.saveSettings();
 					await this.plugin.restart(v);
 				}),
 			);
 		new Setting(el)
-			.setName("Odpojit vault")
-			.setDesc("Soubory zůstanou v zařízení i na serveru, jen se přestanou synchronizovat.")
+			.setName(t("connected.disconnect"))
+			.setDesc(t("connected.disconnectDesc"))
 			.addButton((b) =>
-				b.setButtonText("Odpojit").onClick(() =>
+				b.setButtonText(t("connected.disconnectButton")).onClick(() =>
 					this.run(async () => {
 						await this.plugin.disconnect();
 						this.vaults = null;

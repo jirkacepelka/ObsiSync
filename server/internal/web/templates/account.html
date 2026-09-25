@@ -1,11 +1,11 @@
 {{define "content"}}
-<h1>Můj účet</h1>
+<h1>{{$.T "title.account"}}</h1>
 <form method="post" action="/account" class="card narrow">
   <input type="hidden" name="_csrf" value="{{.CSRF}}">
-  <h2>Změna hesla</h2>
-  <label>Současné heslo <input type="password" name="current" required autocomplete="current-password"></label>
-  <label>Nové heslo (min. 8 znaků) <input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
-  <label>Nové heslo znovu <input type="password" name="password2" required minlength="8" autocomplete="new-password"></label>
-  <button class="primary">Změnit heslo</button>
+  <h2>{{$.T "account.changePassword"}}</h2>
+  <label>{{$.T "account.current"}} <input type="password" name="current" required autocomplete="current-password"></label>
+  <label>{{$.T "account.new"}} <input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+  <label>{{$.T "account.newAgain"}} <input type="password" name="password2" required minlength="8" autocomplete="new-password"></label>
+  <button class="primary">{{$.T "account.changePassword"}}</button>
 </form>
 {{end}}

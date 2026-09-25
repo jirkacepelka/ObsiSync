@@ -1,24 +1,24 @@
 {{define "content"}}
-<h1>Uživatelé</h1>
+<h1>{{$.T "title.users"}}</h1>
 <table>
-  <thead><tr><th>Jméno</th><th>Role</th><th>Vytvořen</th><th>Nové heslo</th><th></th></tr></thead>
+  <thead><tr><th>{{$.T "col.name"}}</th><th>{{$.T "col.role"}}</th><th>{{$.T "col.created"}}</th><th>{{$.T "users.newPassword"}}</th><th></th></tr></thead>
   <tbody>
   {{range index .D "Users"}}
   <tr>
     <td><b>{{.Username}}</b></td>
     <td>
       <form method="post" action="/users/{{.ID}}/admin" class="inline"><input type="hidden" name="_csrf" value="{{$.CSRF}}">
-        {{if .IsAdmin}}<span class="badge">Administrátor</span> <button class="small link">odebrat</button>{{else}}Uživatel <button class="small link">udělat adminem</button>{{end}}
+        {{if .IsAdmin}}<span class="badge">{{$.T "users.admin"}}</span> <button class="small link">{{$.T "users.revokeAdmin"}}</button>{{else}}{{$.T "users.user"}} <button class="small link">{{$.T "users.makeAdmin"}}</button>{{end}}
       </form>
     </td>
-    <td>{{date .CreatedAt}}</td>
+    <td>{{$.Date .CreatedAt}}</td>
     <td>
       <form method="post" action="/users/{{.ID}}/password" class="inline"><input type="hidden" name="_csrf" value="{{$.CSRF}}">
-        <input type="password" name="password" placeholder="nové heslo" minlength="8" required autocomplete="new-password"><button class="small">Nastavit</button>
+        <input type="password" name="password" placeholder="{{$.T "users.newPassword"}}" minlength="8" required autocomplete="new-password"><button class="small">{{$.T "action.set"}}</button>
       </form>
     </td>
     <td>{{if ne .ID $.User.ID}}
-      <form method="post" action="/users/{{.ID}}/delete" onsubmit="return confirm('Smazat uživatele {{.Username}}? Jeho zařízení se odhlásí.')"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small danger">Smazat</button></form>
+      <form method="post" action="/users/{{.ID}}/delete" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{$.T "users.deleteConfirm" .Username}}"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small danger">{{$.T "action.delete"}}</button></form>
     {{end}}</td>
   </tr>
   {{end}}
@@ -26,12 +26,12 @@
 </table>
 <form method="post" action="/users" class="card">
   <input type="hidden" name="_csrf" value="{{.CSRF}}">
-  <h2>Nový uživatel</h2>
+  <h2>{{$.T "users.new"}}</h2>
   <div class="grid2">
-    <label>Uživatelské jméno <input name="username" required pattern="[A-Za-z0-9._@\-]{2,64}" autocomplete="off"></label>
-    <label>Heslo (min. 8 znaků) <input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+    <label>{{$.T "field.username"}} <input name="username" required pattern="[A-Za-z0-9._@\-]{2,64}" autocomplete="off"></label>
+    <label>{{$.T "field.passwordMin"}} <input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
   </div>
-  <label class="check"><input type="checkbox" name="admin" value="1"> Administrátor (spravuje server, vidí všechny vaulty)</label>
-  <button class="primary">Vytvořit uživatele</button>
+  <label class="check"><input type="checkbox" name="admin" value="1"> {{$.T "users.adminHint"}}</label>
+  <button class="primary">{{$.T "users.create"}}</button>
 </form>
 {{end}}

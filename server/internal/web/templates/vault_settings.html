@@ -3,16 +3,16 @@
 {{$v := .Vault}}
 <form method="post" action="/vaults/{{$v.ID}}/settings" class="card">
   <input type="hidden" name="_csrf" value="{{.CSRF}}">
-  <label>Název vaultu <input name="name" value="{{$v.Name}}" required maxlength="100"></label>
-  <h2>Zálohy</h2>
-  {{template "backupfields" (dict3 $v.Backup.IntervalSec $v.Backup.RetentionDays $v.Backup.Zip)}}
-  <button class="primary">Uložit</button>
+  <label>{{$.T "field.vaultName"}} <input name="name" value="{{$v.Name}}" required maxlength="100"></label>
+  <h2>{{$.T "tab.backups"}}</h2>
+  {{template "backupfields" (dict "P" $ "Interval" $v.Backup.IntervalSec "Retention" $v.Backup.RetentionDays "Zip" $v.Backup.Zip)}}
+  <button class="primary">{{$.T "action.save"}}</button>
 </form>
 <form method="post" action="/vaults/{{$v.ID}}/delete" class="card danger-zone">
   <input type="hidden" name="_csrf" value="{{.CSRF}}">
-  <h2>Smazat vault</h2>
-  <p>Smaže vault ze serveru včetně historie a všech záloh. Soubory v zařízeních zůstanou, jen se přestanou synchronizovat. <b>Nelze vrátit.</b></p>
-  <label>Pro potvrzení opiš název <b>{{$v.Name}}</b> <input name="confirm" required autocomplete="off"></label>
-  <button class="danger">Smazat vault</button>
+  <h2>{{$.T "vaultSettings.delete"}}</h2>
+  <p>{{$.T "vaultSettings.deleteHint"}}</p>
+  <label>{{$.T "vaultSettings.confirm"}} <b>{{$v.Name}}</b> <input name="confirm" required autocomplete="off"></label>
+  <button class="danger">{{$.T "vaultSettings.delete"}}</button>
 </form>
 {{end}}

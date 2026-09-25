@@ -4,7 +4,6 @@ package web
 import (
 	"crypto/subtle"
 	"embed"
-	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -20,6 +19,7 @@ import (
 	"github.com/jirkacepelka/obsisync/server/internal/backup"
 	"github.com/jirkacepelka/obsisync/server/internal/blobs"
 	"github.com/jirkacepelka/obsisync/server/internal/hub"
+	"github.com/jirkacepelka/obsisync/server/internal/i18n"
 	"github.com/jirkacepelka/obsisync/server/internal/store"
 )
 
@@ -56,6 +56,8 @@ type page struct {
 	Vault   *store.Vault
 	Role    string
 	Tab     string
+	Lang    string
+	Path    string // current URL, for the language switcher
 	D       map[string]any
 }
 
@@ -71,6 +73,7 @@ func (w *Web) Register(mux *http.ServeMux) error {
 	mux.HandleFunc("GET /login", w.loginForm)
 	mux.HandleFunc("POST /login", w.loginSubmit)
 	mux.HandleFunc("POST /logout", w.user(w.logout))
+	mux.HandleFunc("GET /lang", w.setLang)
 
 	mux.HandleFunc("GET /{$}", w.user(w.dashboard))
 	mux.HandleFunc("GET /vaults", w.user(w.vaultList))
@@ -118,64 +121,85 @@ func (w *Web) Register(mux *http.ServeMux) error {
 }
 
 var funcs = template.FuncMap{
-	"bytes": humanBytes,
-	"date": func(t time.Time) string {
-		if t.IsZero() {
-			return "—"
-		}
-		return t.Local().Format("2. 1. 2006 15:04")
-	},
-	"datep": func(t *time.Time) string {
-		if t == nil {
-			return "—"
-		}
-		return t.Local().Format("2. 1. 2006 15:04")
-	},
-	"ms": func(ms int64) time.Time { return time.UnixMilli(ms) },
-	"ago": func(t time.Time) string {
-		d := time.Since(t)
-		switch {
-		case d < time.Minute:
-			return "právě teď"
-		case d < time.Hour:
-			return fmt.Sprintf("před %d min", int(d.Minutes()))
-		case d < 48*time.Hour:
-			return fmt.Sprintf("před %d h", int(d.Hours()))
-		default:
-			return fmt.Sprintf("před %d dny", int(d.Hours()/24))
-		}
-	},
-	"intervalLabel": func(sec int64) string {
-		for _, i := range store.BackupIntervals {
-			if i.Seconds == sec {
-				return i.Label
-			}
-		}
-		return fmt.Sprintf("%d s", sec)
-	},
-	"retentionLabel": func(days int) string {
-		for _, r := range store.BackupRetentions {
-			if r.Days == days {
-				return r.Label
-			}
-		}
-		return fmt.Sprintf("%d dní", days)
-	},
-	"roleLabel": func(r string) string {
-		return map[string]string{store.RoleOwner: "Vlastník", store.RoleEditor: "Úpravy", store.RoleViewer: "Jen čtení"}[r]
-	},
-	"kindLabel": func(k string) string {
-		return map[string]string{store.BackupScheduled: "Plánovaná", store.BackupManual: "Ruční", store.BackupPreRestore: "Před obnovou"}[k]
-	},
+	"bytes":      humanBytes,
+	"ms":         func(ms int64) time.Time { return time.UnixMilli(ms) },
 	"atLeast":    store.RoleAtLeast,
-	"intervals":  func() any { return store.BackupIntervals },
-	"retentions": func() any { return store.BackupRetentions },
+	"intervals":  func() []int64 { return store.BackupIntervals },
+	"retentions": func() []int { return store.BackupRetentions },
+	"languages":  func() []i18n.Language { return i18n.Languages },
+	"list3":      func(a, b, c string) []string { return []string{a, b, c} },
 	"base":       path.Base,
 	"q":          url.QueryEscape,
-	"short":      func(h string) string { return h[:min(len(h), 10)] },
-	"dict3": func(interval int64, retention int, zip bool) map[string]any {
-		return map[string]any{"Interval": interval, "Retention": retention, "Zip": zip}
+	// dict builds a map for passing several values to a sub-template.
+	"dict": func(kv ...any) map[string]any {
+		m := map[string]any{}
+		for i := 0; i+1 < len(kv); i += 2 {
+			m[kv[i].(string)] = kv[i+1]
+		}
+		return m
 	},
+}
+
+// ---- translation helpers used by templates as {{$.T "key"}} etc. ----
+
+func (p *page) T(key string, args ...any) string { return i18n.T(p.Lang, key, args...) }
+
+func formatDate(lang string, t time.Time) string {
+	if t.IsZero() {
+		return "—"
+	}
+	return t.Local().Format(i18n.T(lang, "fmt.datetime"))
+}
+
+func (p *page) Date(t time.Time) string { return formatDate(p.Lang, t) }
+
+func (p *page) DateP(t *time.Time) string {
+	if t == nil {
+		return "—"
+	}
+	return formatDate(p.Lang, *t)
+}
+
+func (p *page) Ago(t time.Time) string {
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return p.T("ago.now")
+	case d < time.Hour:
+		return p.T("ago.minutes", int(d.Minutes()))
+	case d < 48*time.Hour:
+		return p.T("ago.hours", int(d.Hours()))
+	default:
+		return p.T("ago.days", int(d.Hours()/24))
+	}
+}
+
+func (p *page) Interval(sec int64) string { return p.T(fmt.Sprintf("interval.%d", sec)) }
+
+func (p *page) Retention(days int) string { return p.T(fmt.Sprintf("retention.%d", days)) }
+
+func (p *page) RoleName(r string) string { return p.T("role." + r) }
+
+func (p *page) Kind(k string) string { return p.T("kind." + k) }
+
+func (w *Web) tr(r *http.Request, key string, args ...any) string {
+	return i18n.T(i18n.FromRequest(r), key, args...)
+}
+
+func (w *Web) errText(r *http.Request, err error) string {
+	return i18n.Err(i18n.FromRequest(r), err)
+}
+
+func (w *Web) date(r *http.Request, t time.Time) string {
+	return formatDate(i18n.FromRequest(r), t)
+}
+
+// setLang stores the chosen language in a cookie and goes back.
+func (w *Web) setLang(rw http.ResponseWriter, r *http.Request) {
+	if l := r.URL.Query().Get("l"); i18n.Supported(l) {
+		http.SetCookie(rw, &http.Cookie{Name: "lang", Value: l, Path: "/", MaxAge: 5 * 365 * 24 * 3600, SameSite: http.SameSiteLaxMode})
+	}
+	http.Redirect(rw, r, safeNext(r.URL.Query().Get("next")), http.StatusSeeOther)
 }
 
 func humanBytes(n int64) string {
@@ -218,6 +242,8 @@ func (w *Web) render(rw http.ResponseWriter, r *http.Request, name string, p *pa
 		return
 	}
 	p.Version = w.Version
+	p.Lang = i18n.FromRequest(r)
+	p.Path = r.URL.RequestURI()
 	if p.OK == "" {
 		p.OK = r.URL.Query().Get("ok")
 	}
@@ -252,7 +278,7 @@ func redirect(rw http.ResponseWriter, r *http.Request, target, okMsg, errMsg str
 
 func (w *Web) fail(rw http.ResponseWriter, r *http.Request, status int, msg string) {
 	rw.WriteHeader(status)
-	w.render(rw, r, "error", &page{Title: "Chyba", Err: msg})
+	w.render(rw, r, "error", &page{Title: w.tr(r, "title.error"), Err: msg})
 }
 
 // ---- sessions & middleware ----
@@ -308,7 +334,7 @@ func (w *Web) user(h handler) http.HandlerFunc {
 			return
 		}
 		if r.Method == http.MethodPost && subtle.ConstantTimeCompare([]byte(r.FormValue("_csrf")), []byte(s.csrf)) != 1 {
-			w.fail(rw, r, http.StatusForbidden, "Neplatný formulář (CSRF). Obnov stránku a zkus to znovu.")
+			w.fail(rw, r, http.StatusForbidden, w.tr(r, "msg.csrf"))
 			return
 		}
 		h(rw, r, &page{User: s.user, CSRF: s.csrf})
@@ -318,7 +344,7 @@ func (w *Web) user(h handler) http.HandlerFunc {
 func (w *Web) admin(h handler) http.HandlerFunc {
 	return w.user(func(rw http.ResponseWriter, r *http.Request, p *page) {
 		if !p.User.IsAdmin {
-			w.fail(rw, r, http.StatusForbidden, "Tato stránka je jen pro administrátory.")
+			w.fail(rw, r, http.StatusForbidden, w.tr(r, "msg.adminOnly"))
 			return
 		}
 		h(rw, r, p)
@@ -330,16 +356,16 @@ func (w *Web) vault(minRole string, h handler) http.HandlerFunc {
 		id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
 		role, err := w.Store.Role(r.Context(), p.User, id)
 		if err != nil || role == "" {
-			w.fail(rw, r, http.StatusNotFound, "Vault neexistuje nebo k němu nemáš přístup.")
+			w.fail(rw, r, http.StatusNotFound, w.tr(r, "msg.vaultNotFound"))
 			return
 		}
 		if !store.RoleAtLeast(role, minRole) {
-			w.fail(rw, r, http.StatusForbidden, "K této akci nemáš oprávnění.")
+			w.fail(rw, r, http.StatusForbidden, w.tr(r, "msg.forbidden"))
 			return
 		}
 		v, err := w.Store.Vault(r.Context(), id)
 		if err != nil {
-			w.fail(rw, r, http.StatusNotFound, "Vault neexistuje.")
+			w.fail(rw, r, http.StatusNotFound, w.tr(r, "msg.vaultNotFound"))
 			return
 		}
 		p.Vault, p.Role, p.Nav = v, role, "vaults"
@@ -350,11 +376,4 @@ func (w *Web) vault(minRole string, h handler) http.HandlerFunc {
 func formInt(r *http.Request, key string) int64 {
 	n, _ := strconv.ParseInt(r.FormValue(key), 10, 64)
 	return n
-}
-
-func errText(err error) string {
-	if errors.Is(err, store.ErrNotFound) {
-		return "Nenalezeno."
-	}
-	return err.Error()
 }

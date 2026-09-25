@@ -14,7 +14,7 @@ func (w *Web) setupForm(rw http.ResponseWriter, r *http.Request) {
 		http.Redirect(rw, r, "/", http.StatusSeeOther)
 		return
 	}
-	w.render(rw, r, "setup", &page{Title: "První spuštění"})
+	w.render(rw, r, "setup", &page{Title: w.tr(r, "title.setup")})
 }
 
 func (w *Web) setupSubmit(rw http.ResponseWriter, r *http.Request) {
@@ -22,12 +22,12 @@ func (w *Web) setupSubmit(rw http.ResponseWriter, r *http.Request) {
 		http.Redirect(rw, r, "/", http.StatusSeeOther)
 		return
 	}
-	p := &page{Title: "První spuštění", D: map[string]any{"Username": r.FormValue("username")}}
+	p := &page{Title: w.tr(r, "title.setup"), D: map[string]any{"Username": r.FormValue("username")}}
 	pw := r.FormValue("password")
 	if pw != r.FormValue("password2") {
-		p.Err = "Hesla se neshodují."
+		p.Err = w.tr(r, "msg.passwordsDiffer")
 	} else if err := auth.ValidatePassword(pw); err != nil {
-		p.Err = err.Error()
+		p.Err = w.errText(r, err)
 	}
 	if p.Err == "" {
 		hash, err := auth.HashPassword(pw)
@@ -36,12 +36,12 @@ func (w *Web) setupSubmit(rw http.ResponseWriter, r *http.Request) {
 			if u, err = w.Store.CreateUser(r.Context(), r.FormValue("username"), hash, true); err == nil {
 				w.Log.Info("setup: admin created", "user", u.Username)
 				if err = w.startSession(rw, r, u); err == nil {
-					redirect(rw, r, "/", "Server je připravený. Založ si první vault.", "")
+					redirect(rw, r, "/", w.tr(r, "msg.setupDone"), "")
 					return
 				}
 			}
 		}
-		p.Err = err.Error()
+		p.Err = w.errText(r, err)
 	}
 	w.render(rw, r, "setup", p)
 }
@@ -62,29 +62,29 @@ func (w *Web) loginForm(rw http.ResponseWriter, r *http.Request) {
 		http.Redirect(rw, r, "/", http.StatusSeeOther)
 		return
 	}
-	w.render(rw, r, "login", &page{Title: "Přihlášení", D: map[string]any{"Next": safeNext(r.URL.Query().Get("next"))}})
+	w.render(rw, r, "login", &page{Title: w.tr(r, "title.login"), D: map[string]any{"Next": safeNext(r.URL.Query().Get("next"))}})
 }
 
 func (w *Web) loginSubmit(rw http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("username")
 	next := safeNext(r.FormValue("next"))
-	p := &page{Title: "Přihlášení", D: map[string]any{"Next": next, "Username": name}}
+	p := &page{Title: w.tr(r, "title.login"), D: map[string]any{"Next": next, "Username": name}}
 	key := api.ClientIP(r) + "|" + strings.ToLower(name)
 	if !w.Limiter.Allowed(key) {
-		p.Err = "Příliš mnoho pokusů, zkus to za 15 minut."
+		p.Err = w.tr(r, "msg.rateLimited")
 		w.render(rw, r, "login", p)
 		return
 	}
 	u, err := w.Store.UserByName(r.Context(), name)
 	if err != nil || !auth.CheckPassword(u.PasswordHash(), r.FormValue("password")) {
 		w.Limiter.Fail(key)
-		p.Err = "Špatné jméno nebo heslo."
+		p.Err = w.tr(r, "msg.badLogin")
 		w.render(rw, r, "login", p)
 		return
 	}
 	w.Limiter.Reset(key)
 	if err := w.startSession(rw, r, u); err != nil {
-		p.Err = err.Error()
+		p.Err = w.errText(r, err)
 		w.render(rw, r, "login", p)
 		return
 	}
@@ -100,38 +100,38 @@ func (w *Web) logout(rw http.ResponseWriter, r *http.Request, p *page) {
 }
 
 func (w *Web) account(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Nav = "Můj účet", "account"
+	p.Title, p.Nav = w.tr(r, "title.account"), "account"
 	w.render(rw, r, "account", p)
 }
 
 func (w *Web) accountSave(rw http.ResponseWriter, r *http.Request, p *page) {
 	if !auth.CheckPassword(p.User.PasswordHash(), r.FormValue("current")) {
-		redirect(rw, r, "/account", "", "Současné heslo není správně.")
+		redirect(rw, r, "/account", "", w.tr(r, "msg.currentPasswordWrong"))
 		return
 	}
 	pw := r.FormValue("password")
 	if pw != r.FormValue("password2") {
-		redirect(rw, r, "/account", "", "Nová hesla se neshodují.")
+		redirect(rw, r, "/account", "", w.tr(r, "msg.passwordsDiffer"))
 		return
 	}
 	if err := auth.ValidatePassword(pw); err != nil {
-		redirect(rw, r, "/account", "", err.Error())
+		redirect(rw, r, "/account", "", w.errText(r, err))
 		return
 	}
 	hash, _ := auth.HashPassword(pw)
 	if err := w.Store.SetPassword(r.Context(), p.User.ID, hash); err != nil {
-		redirect(rw, r, "/account", "", err.Error())
+		redirect(rw, r, "/account", "", w.errText(r, err))
 		return
 	}
 	u, _ := w.Store.UserByID(r.Context(), p.User.ID)
 	w.startSession(rw, r, u)
-	redirect(rw, r, "/account", "Heslo bylo změněno. Připojená zařízení zůstávají přihlášená.", "")
+	redirect(rw, r, "/account", w.tr(r, "msg.passwordChanged"), "")
 }
 
 // ---- users (admin) ----
 
 func (w *Web) users(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Nav = "Uživatelé", "users"
+	p.Title, p.Nav = w.tr(r, "title.users"), "users"
 	users, err := w.Store.ListUsers(r.Context())
 	if err != nil {
 		w.fail(rw, r, 500, err.Error())
@@ -144,22 +144,22 @@ func (w *Web) users(rw http.ResponseWriter, r *http.Request, p *page) {
 func (w *Web) userCreate(rw http.ResponseWriter, r *http.Request, p *page) {
 	pw := r.FormValue("password")
 	if err := auth.ValidatePassword(pw); err != nil {
-		redirect(rw, r, "/users", "", err.Error())
+		redirect(rw, r, "/users", "", w.errText(r, err))
 		return
 	}
 	hash, _ := auth.HashPassword(pw)
 	u, err := w.Store.CreateUser(r.Context(), r.FormValue("username"), hash, r.FormValue("admin") == "1")
 	if err != nil {
-		redirect(rw, r, "/users", "", err.Error())
+		redirect(rw, r, "/users", "", w.errText(r, err))
 		return
 	}
-	redirect(rw, r, "/users", "Uživatel "+u.Username+" byl vytvořen. Přidej ho do vaultu v nastavení členů.", "")
+	redirect(rw, r, "/users", w.tr(r, "msg.userCreated", u.Username), "")
 }
 
 func (w *Web) targetUser(rw http.ResponseWriter, r *http.Request) *store.User {
 	u, err := w.Store.UserByID(r.Context(), formIntPath(r, "uid"))
 	if err != nil {
-		redirect(rw, r, "/users", "", "Uživatel neexistuje.")
+		redirect(rw, r, "/users", "", w.tr(r, "msg.userNotFound"))
 		return nil
 	}
 	return u
@@ -172,15 +172,15 @@ func (w *Web) userPassword(rw http.ResponseWriter, r *http.Request, p *page) {
 	}
 	pw := r.FormValue("password")
 	if err := auth.ValidatePassword(pw); err != nil {
-		redirect(rw, r, "/users", "", err.Error())
+		redirect(rw, r, "/users", "", w.errText(r, err))
 		return
 	}
 	hash, _ := auth.HashPassword(pw)
 	if err := w.Store.SetPassword(r.Context(), u.ID, hash); err != nil {
-		redirect(rw, r, "/users", "", err.Error())
+		redirect(rw, r, "/users", "", w.errText(r, err))
 		return
 	}
-	redirect(rw, r, "/users", "Heslo uživatele "+u.Username+" bylo změněno.", "")
+	redirect(rw, r, "/users", w.tr(r, "msg.userPasswordChanged", u.Username), "")
 }
 
 func (w *Web) userAdmin(rw http.ResponseWriter, r *http.Request, p *page) {
@@ -191,12 +191,12 @@ func (w *Web) userAdmin(rw http.ResponseWriter, r *http.Request, p *page) {
 	makeAdmin := !u.IsAdmin
 	if !makeAdmin {
 		if n, _ := w.Store.CountAdmins(r.Context()); n <= 1 {
-			redirect(rw, r, "/users", "", "Musí zůstat alespoň jeden administrátor.")
+			redirect(rw, r, "/users", "", w.tr(r, "msg.lastAdmin"))
 			return
 		}
 	}
 	w.Store.SetAdmin(r.Context(), u.ID, makeAdmin)
-	redirect(rw, r, "/users", "Uloženo.", "")
+	redirect(rw, r, "/users", w.tr(r, "msg.saved"), "")
 }
 
 func (w *Web) userDelete(rw http.ResponseWriter, r *http.Request, p *page) {
@@ -205,23 +205,23 @@ func (w *Web) userDelete(rw http.ResponseWriter, r *http.Request, p *page) {
 		return
 	}
 	if u.ID == p.User.ID {
-		redirect(rw, r, "/users", "", "Nemůžeš smazat sám sebe.")
+		redirect(rw, r, "/users", "", w.tr(r, "msg.cannotDeleteSelf"))
 		return
 	}
 	if u.IsAdmin {
 		if n, _ := w.Store.CountAdmins(r.Context()); n <= 1 {
-			redirect(rw, r, "/users", "", "Musí zůstat alespoň jeden administrátor.")
+			redirect(rw, r, "/users", "", w.tr(r, "msg.lastAdmin"))
 			return
 		}
 	}
 	w.Store.DeleteUser(r.Context(), u.ID)
-	redirect(rw, r, "/users", "Uživatel "+u.Username+" byl smazán.", "")
+	redirect(rw, r, "/users", w.tr(r, "msg.userDeleted", u.Username), "")
 }
 
 // ---- devices ----
 
 func (w *Web) devices(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Nav = "Zařízení", "devices"
+	p.Title, p.Nav = w.tr(r, "title.devices"), "devices"
 	var uid int64
 	if !p.User.IsAdmin {
 		uid = p.User.ID
@@ -238,17 +238,17 @@ func (w *Web) devices(rw http.ResponseWriter, r *http.Request, p *page) {
 func (w *Web) deviceDelete(rw http.ResponseWriter, r *http.Request, p *page) {
 	d, err := w.Store.DeviceByID(r.Context(), formIntPath(r, "did"))
 	if err != nil || (d.UserID != p.User.ID && !p.User.IsAdmin) {
-		redirect(rw, r, "/devices", "", "Zařízení neexistuje.")
+		redirect(rw, r, "/devices", "", w.tr(r, "msg.deviceNotFound"))
 		return
 	}
 	w.Store.DeleteDevice(r.Context(), d.ID)
-	redirect(rw, r, "/devices", "Zařízení "+d.Name+" bylo odhlášeno. Při další synchronizaci bude vyzváno k přihlášení.", "")
+	redirect(rw, r, "/devices", w.tr(r, "msg.deviceLoggedOut", d.Name), "")
 }
 
 // ---- server settings (admin) ----
 
 func (w *Web) settings(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Nav = "Nastavení serveru", "settings"
+	p.Title, p.Nav = w.tr(r, "title.serverSettings"), "settings"
 	p.D = map[string]any{"S": w.Store.Settings(r.Context())}
 	w.render(rw, r, "settings", p)
 }
@@ -260,14 +260,14 @@ func (w *Web) settingsSave(rw http.ResponseWriter, r *http.Request, p *page) {
 		UsersCanCreateVaults: r.FormValue("users_can_create_vaults") == "1",
 	}
 	if st.VersionRetentionDays < 0 || st.MaxFileMB < 1 || st.MaxFileMB > 10240 {
-		redirect(rw, r, "/settings", "", "Neplatné hodnoty.")
+		redirect(rw, r, "/settings", "", w.tr(r, "msg.invalidValues"))
 		return
 	}
 	if err := w.Store.SaveSettings(r.Context(), st); err != nil {
-		redirect(rw, r, "/settings", "", err.Error())
+		redirect(rw, r, "/settings", "", w.errText(r, err))
 		return
 	}
-	redirect(rw, r, "/settings", "Nastavení uloženo.", "")
+	redirect(rw, r, "/settings", w.tr(r, "msg.settingsSaved"), "")
 }
 
 func formIntPath(r *http.Request, key string) int64 {

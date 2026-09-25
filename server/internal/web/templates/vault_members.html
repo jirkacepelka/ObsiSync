@@ -2,7 +2,7 @@
 {{template "vaultnav" .}}
 {{$v := .Vault}}
 <table>
-  <thead><tr><th>Uživatel</th><th>Role</th><th></th></tr></thead>
+  <thead><tr><th>{{$.T "col.user"}}</th><th>{{$.T "col.role"}}</th><th></th></tr></thead>
   <tbody>
   {{range index .D "Members"}}
   <tr>
@@ -11,36 +11,35 @@
       <form method="post" action="/vaults/{{$v.ID}}/members" class="inline">
         <input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="user_id" value="{{.UserID}}">
         <select name="role" onchange="this.form.submit()">
-          <option value="owner" {{if eq .Role "owner"}}selected{{end}}>Vlastník</option>
-          <option value="editor" {{if eq .Role "editor"}}selected{{end}}>Úpravy</option>
-          <option value="viewer" {{if eq .Role "viewer"}}selected{{end}}>Jen čtení</option>
+          {{$r := .Role}}
+          {{range $role := (list3 "owner" "editor" "viewer")}}<option value="{{$role}}" {{if eq $role $r}}selected{{end}}>{{$.RoleName $role}}</option>{{end}}
         </select>
-        <noscript><button class="small">Uložit</button></noscript>
+        <noscript><button class="small">{{$.T "action.save"}}</button></noscript>
       </form>
     </td>
     <td>
-      <form method="post" action="/vaults/{{$v.ID}}/members/remove"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="user_id" value="{{.UserID}}"><button class="small danger">Odebrat</button></form>
+      <form method="post" action="/vaults/{{$v.ID}}/members/remove"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="user_id" value="{{.UserID}}"><button class="small danger">{{$.T "action.remove"}}</button></form>
     </td>
   </tr>
   {{else}}
-  <tr><td colspan="3" class="muted">Vault zatím nemá žádné členy (administrátoři mají přístup vždy).</td></tr>
+  <tr><td colspan="3" class="muted">{{$.T "members.none"}}</td></tr>
   {{end}}
   </tbody>
 </table>
 <form method="post" action="/vaults/{{$v.ID}}/members" class="card inline-form">
   <input type="hidden" name="_csrf" value="{{.CSRF}}">
-  <h3>Přidat člena</h3>
+  <h3>{{$.T "members.add"}}</h3>
   {{with index .D "Users"}}
   <select name="user_id">{{range .}}<option value="{{.ID}}">{{.Username}}</option>{{end}}</select>
   {{else}}
-  <input name="username" placeholder="uživatelské jméno" required>
+  <input name="username" placeholder="{{$.T "field.username"}}" required>
   {{end}}
   <select name="role">
-    <option value="editor">Úpravy</option>
-    <option value="viewer">Jen čtení</option>
-    <option value="owner">Vlastník</option>
+    <option value="editor">{{$.RoleName "editor"}}</option>
+    <option value="viewer">{{$.RoleName "viewer"}}</option>
+    <option value="owner">{{$.RoleName "owner"}}</option>
   </select>
-  <button class="primary">Přidat</button>
+  <button class="primary">{{$.T "action.add"}}</button>
 </form>
-<p class="muted"><b>Vlastník</b> spravuje členy, zálohy a nastavení. <b>Úpravy</b> = plná synchronizace. <b>Jen čtení</b> = vault se stahuje, ale změny se na server neposílají.</p>
+<p class="muted">{{$.T "members.rolesHint"}}</p>
 {{end}}

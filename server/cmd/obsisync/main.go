@@ -32,19 +32,19 @@ func env(key, def string) string {
 func usage() {
 	fmt.Fprintf(os.Stderr, `ObsiSync %s
 
-Použití:
-  obsisync [serve]                       spustí server
-  obsisync reset-password <jméno> <heslo> nastaví heslo uživateli (i když zapomeneš admin heslo)
-  obsisync backup-db <soubor>            uloží konzistentní kopii databáze
-  obsisync healthcheck                   ověří, že server běží (pro Docker)
+Usage:
+  obsisync [serve]                         start the server
+  obsisync reset-password <name> <password> set a user's password (creates an admin if missing)
+  obsisync backup-db <file>                write a consistent copy of the database
+  obsisync healthcheck                     check that the server runs (for Docker)
   obsisync version
 
-Proměnné prostředí:
-  TZ                   časové pásmo pro zobrazení časů (např. Europe/Prague)
-  OBSISYNC_DATA        datová složka (výchozí /data, mimo Docker ./data)
-  OBSISYNC_ADDR        adresa pro naslouchání (výchozí :8080)
-  OBSISYNC_BACKUP_DIR  kam ukládat ZIP zálohy (výchozí $OBSISYNC_DATA/backups)
-  OBSISYNC_PLUGIN_DIR  složka se sestaveným pluginem pro stažení (výchozí /app/plugin)
+Environment:
+  TZ                   time zone for displayed times (e.g. Europe/Prague)
+  OBSISYNC_DATA        data folder (default /data, outside Docker ./data)
+  OBSISYNC_ADDR        listen address (default :8080)
+  OBSISYNC_BACKUP_DIR  where ZIP backups go (default $OBSISYNC_DATA/backups)
+  OBSISYNC_PLUGIN_DIR  folder with the built Obsidian plugin (default /app/plugin)
 `, version)
 }
 
@@ -72,7 +72,7 @@ func main() {
 			os.Exit(2)
 		}
 		exitOn(resetPassword(dataDir, os.Args[2], os.Args[3]))
-		fmt.Println("Heslo nastaveno.")
+		fmt.Println("Password set.")
 	case "backup-db":
 		if len(os.Args) != 3 {
 			usage()
@@ -81,7 +81,7 @@ func main() {
 		st, err := store.Open(filepath.Join(dataDir, "obsisync.db"))
 		exitOn(err)
 		exitOn(st.BackupDB(context.Background(), os.Args[2]))
-		fmt.Println("Databáze uložena do", os.Args[2])
+		fmt.Println("Database written to", os.Args[2])
 	case "healthcheck":
 		exitOn(healthcheck(env("OBSISYNC_ADDR", ":8080")))
 	case "version":
@@ -111,7 +111,7 @@ func healthcheck(addr string) error {
 
 func exitOn(err error) {
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Chyba:", err)
+		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
 	}
 }
@@ -173,7 +173,7 @@ func serve(log *slog.Logger, dataDir string) error {
 		if strings.HasPrefix(host, ":") {
 			host = "localhost" + host
 		}
-		log.Info("První spuštění: otevři webové rozhraní a vytvoř administrátorský účet", "url", "http://"+host+"/setup")
+		log.Info("First start: open the web UI and create the administrator account", "url", "http://"+host+"/setup")
 	}
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err

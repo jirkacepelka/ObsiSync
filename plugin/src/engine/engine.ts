@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { ApiError, Client } from "./client";
 import { sha256 } from "./hash";
 import { isMergeable, mergeText } from "./merge";
@@ -30,12 +31,14 @@ export interface SyncResult {
 	readOnly: boolean;
 	/** Paths that could not be synced (e.g. case collisions, too large). */
 	problems: string[];
+	/** Local files moved to the trash while taking over the server state. */
+	trashed: number;
 }
 
 /** Thrown instead of deleting a large part of the vault on the server. */
 export class MassDeleteError extends Error {
 	constructor(public count: number) {
-		super(`Synchronizace by na serveru smazala ${count} souborů`);
+		super(t("engine.massDelete", { count }));
 	}
 }
 
@@ -59,10 +62,12 @@ function toBuffer(u: Uint8Array): ArrayBuffer {
  *  2. pulls server changes since the last seen revision and applies them,
  *     resolving conflicts (3-way merge for text, conflict copy otherwise),
  *  3. pushes local changes with compare-and-swap commits against the base.
+ *
+ * When connecting to a vault that already has content on the server
+ * (state.initialFromServer), the first sync only pulls: differing and
+ * local-only files are moved to the local trash and nothing is uploaded.
  */
 export class SyncEngine {
-	/** When set, the next sync prefers server content in conflicts. */
-	preferRemote = false;
 	/** When set, the next sync may delete many files on the server. */
 	allowMassDelete = false;
 
@@ -77,7 +82,7 @@ export class SyncEngine {
 	}
 
 	async sync(): Promise<SyncResult> {
-		const result: SyncResult = { pulled: 0, pushed: 0, conflicts: 0, readOnly: false, problems: [] };
+		const result: SyncResult = { pulled: 0, pushed: 0, conflicts: 0, readOnly: false, problems: [], trashed: 0 };
 		// Pushing can race with another device; a rejected commit is resolved
 		// by pulling again, so a few rounds may be needed.
 		try {
@@ -85,8 +90,13 @@ export class SyncEngine {
 				if (!(await this.pass(result))) break;
 			}
 		} finally {
-			this.preferRemote = false;
 			this.allowMassDelete = false;
+		}
+		// Cleared only after a complete pass, so an interrupted first sync
+		// resumes in "copy the server" mode.
+		if (this.o.state.initialFromServer) {
+			this.o.state.initialFromServer = false;
+			await this.o.saveState(this.o.state);
 		}
 		return result;
 	}
@@ -106,7 +116,7 @@ export class SyncEngine {
 				try {
 					hash = await sha256(await this.o.fs.read(st.path));
 				} catch (e) {
-					this.log(`Nelze přečíst ${st.path}: ${e}`);
+					this.log(`Cannot read ${st.path}: ${e}`);
 					unreadable.add(key);
 					continue;
 				}
@@ -141,10 +151,21 @@ export class SyncEngine {
 			await this.o.saveState(this.o.state);
 			if (!page.more) break;
 		}
+		const base = this.o.state.base;
+		if (this.o.state.initialFromServer) {
+			// Files that exist only here are set aside, not uploaded.
+			for (const [key, f] of local) {
+				if (!base[key]) {
+					await this.o.fs.trash(f.path);
+					local.delete(key);
+					result.trashed++;
+				}
+			}
+			return false;
+		}
 		if (result.readOnly) return false;
 
 		// ---- push ----
-		const base = this.o.state.base;
 		const ops: { op: CommitOp; file?: LocalFile }[] = [];
 		for (const [key, f] of local) {
 			const b = base[key];
@@ -179,7 +200,7 @@ export class SyncEngine {
 					await this.o.client.upload(this.o.state.vaultId, o.op.hash, data);
 				} catch (e) {
 					if (e instanceof ApiError && (e.code === "too_large" || e.status === 413)) {
-						result.problems.push(`${o.op.path}: soubor je větší než limit serveru`);
+						result.problems.push(t("problem.tooLarge", { path: o.op.path }));
 						continue;
 					}
 					throw e;
@@ -203,7 +224,7 @@ export class SyncEngine {
 				} else if (r.error === "conflict" || r.error === "missing_blob") {
 					again = true;
 				} else if (r.error === "case_conflict") {
-					result.problems.push(`${r.path}: na serveru už je soubor ${r.current?.path} lišící se jen velikostí písmen`);
+					result.problems.push(t("problem.case", { path: r.path, other: r.current?.path ?? "" }));
 				} else {
 					result.problems.push(`${r.path}: ${r.error}`);
 				}
@@ -215,8 +236,8 @@ export class SyncEngine {
 
 	private async download(hash: string): Promise<ArrayBuffer> {
 		const data = await this.o.client.download(this.o.state.vaultId, hash);
-		if (!data) throw new Error(`obsah ${hash.slice(0, 8)} na serveru chybí`);
-		if ((await sha256(data)) !== hash) throw new Error(`poškozený přenos ${hash.slice(0, 8)}`);
+		if (!data) throw new Error(t("engine.missingContent", { hash: hash.slice(0, 8) }));
+		if ((await sha256(data)) !== hash) throw new Error(t("engine.corrupt", { hash: hash.slice(0, 8) }));
 		return data;
 	}
 
@@ -255,8 +276,19 @@ export class SyncEngine {
 			return false;
 		}
 
-		if (lHash === b || this.preferRemote) {
-			// No local edits (or the server wins): take the server version.
+		if (this.o.state.initialFromServer && l) {
+			// Taking over the server state: keep the differing local file in the trash.
+			await this.o.fs.trash(l.path);
+			local.delete(key);
+			l = undefined;
+			result.trashed++;
+			if (rHash === "") return true;
+			base[key] = await this.writeLocal(key, key, await this.download(rHash), r.mtime, rHash, local);
+			return true;
+		}
+
+		if (lHash === b) {
+			// No local edits: take the server version.
 			if (rHash === "") {
 				if (l) await this.o.fs.remove(l.path);
 				local.delete(key);
@@ -293,7 +325,7 @@ export class SyncEngine {
 						local.set(key, { path: l!.path, size: st.size, mtime: st.mtime, hash: mergedHash });
 						// Base is the server version; the merge result is pushed on top of it.
 						base[key] = mergedHash === rHash ? { hash: rHash, size: st.size, mtime: st.mtime } : { hash: rHash, size: -1, mtime: -1 };
-						this.log(`Sloučeny změny v ${key}`);
+						this.log(`Merged changes in ${key}`);
 						return true;
 					}
 				}
@@ -306,7 +338,7 @@ export class SyncEngine {
 		await this.writeLocal(copy, copy, localData, l!.mtime, lHash, local);
 		base[key] = await this.writeLocal(key, l!.path, remoteData, r.mtime, rHash, local);
 		result.conflicts++;
-		this.log(`Konflikt v ${key}, tvoje verze uložena jako ${copy}`);
+		this.log(`Conflict in ${key}, local version saved as ${copy}`);
 		this.o.onConflict?.(key, copy);
 		return true;
 	}
@@ -321,10 +353,10 @@ export class SyncEngine {
 		const dot = name.lastIndexOf(".");
 		const stem = dot > 0 ? name.slice(0, dot) : name;
 		const ext = dot > 0 ? name.slice(dot) : "";
-		const device = this.o.deviceName.replace(/[\\/:*?"<>|#^[\]]/g, "").trim() || "zařízení";
+		const device = this.o.deviceName.replace(/[\\/:*?"<>|#^[\]]/g, "").trim() || t("engine.device");
 		for (let n = 1; ; n++) {
 			const suffix = n === 1 ? "" : ` ${n}`;
-			const p = `${dir}${stem} (konflikt ${stamp} ${device}${suffix})${ext}`;
+			const p = `${dir}${stem} (${t("engine.conflictWord")} ${stamp} ${device}${suffix})${ext}`;
 			if (!local.has(p) && !(await this.o.fs.stat(p))) return p;
 		}
 	}

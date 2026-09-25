@@ -1,9 +1,10 @@
 {
   "id": "obsisync",
   "name": "ObsiSync",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minAppVersion": "1.4.0",
-  "description": "Simple sync with your own ObsiSync server: enter server address, name and password, pick a vault. Done.",
-  "author": "Jirka Čepelka",
-  "isDesktopOnly": false
+  "description": "Sync your vaults through your own ObsiSync server. Enter the server address, name and password, then pick a vault.",
+  "author": "jirkacepelka",
+  "isDesktopOnly": false,
+  "authorUrl": "https://github.com/jirkacepelka"
 }

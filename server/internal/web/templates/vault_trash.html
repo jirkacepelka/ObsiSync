@@ -1,14 +1,14 @@
 {{define "content"}}
 {{template "vaultnav" .}}
 {{$v := .Vault}}
-<p class="muted">Smazané soubory. Otevři soubor a obnov jeho poslední verzi – obnova se sama rozšíří do všech zařízení.</p>
+<p class="muted">{{$.T "trash.hint"}}</p>
 <table>
-  <thead><tr><th>Soubor</th><th>Smazáno</th></tr></thead>
+  <thead><tr><th>{{$.T "col.file"}}</th><th>{{$.T "col.deleted"}}</th></tr></thead>
   <tbody>
   {{range index .D "Files"}}
-    <tr><td><a href="/vaults/{{$v.ID}}/file?path={{q .Path}}">{{.Path}}</a></td><td>{{date (ms .Mtime)}}</td></tr>
+    <tr><td><a href="/vaults/{{$v.ID}}/file?path={{q .Path}}">{{.Path}}</a></td><td>{{$.Date (ms .Mtime)}}</td></tr>
   {{else}}
-    <tr><td colspan="2" class="muted">Koš je prázdný.</td></tr>
+    <tr><td colspan="2" class="muted">{{$.T "trash.empty"}}</td></tr>
   {{end}}
   </tbody>
 </table>

@@ -1,3 +1,4 @@
+import { hasText, t } from "../i18n";
 import type { CommitOp, Http, HttpResponse, OpResult, RemoteEntry } from "./types";
 
 export class ApiError extends Error {
@@ -15,6 +16,8 @@ export interface VaultInfo {
 	name: string;
 	role: "owner" | "editor" | "viewer";
 	head_rev: number;
+	/** Number of files on the server (missing on servers older than 0.2.0). */
+	file_count?: number;
 }
 
 export interface ChangesPage {
@@ -59,11 +62,11 @@ export class Client {
 				contentType: raw ? "application/octet-stream" : "application/json",
 			});
 		} catch (e) {
-			throw new ApiError(0, "network", `Server je nedostupný (${e instanceof Error ? e.message : String(e)})`);
+			throw new ApiError(0, "network", t("err.network", { msg: e instanceof Error ? e.message : String(e) }));
 		}
 		if (res.status >= 400) {
 			let code = "http_" + res.status;
-			let msg = `Chyba serveru (${res.status})`;
+			let msg = t("err.server", { status: res.status });
 			try {
 				const j = res.json;
 				if (j?.error) code = j.error;
@@ -71,6 +74,9 @@ export class Client {
 			} catch {
 				/* not JSON */
 			}
+			// Known errors in the user's language; others as the server says.
+			const key = "err." + code;
+			if (hasText(key)) msg = t(key);
 			throw new ApiError(res.status, code, msg);
 		}
 		return res;
@@ -84,7 +90,7 @@ export class Client {
 		} catch (e) {
 			if (e instanceof ApiError && e.status === 0) throw e;
 		}
-		if (!ok) throw new ApiError(0, "not_obsisync", "Na této adrese neběží ObsiSync server");
+		if (!ok) throw new ApiError(0, "not_obsisync", t("err.notObsisync"));
 	}
 
 	async login(username: string, password: string, deviceName: string): Promise<string> {

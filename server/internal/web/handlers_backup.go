@@ -16,14 +16,14 @@ import (
 func (w *Web) backupFor(rw http.ResponseWriter, r *http.Request, p *page) *store.Backup {
 	b, err := w.Store.Backup(r.Context(), formIntPath(r, "bid"))
 	if err != nil || b.VaultID != p.Vault.ID {
-		w.fail(rw, r, http.StatusNotFound, "Záloha nenalezena.")
+		w.fail(rw, r, http.StatusNotFound, w.tr(r, "msg.backupNotFound"))
 		return nil
 	}
 	return b
 }
 
 func (w *Web) backups(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Tab = p.Vault.Name+" – zálohy", "backups"
+	p.Title, p.Tab = p.Vault.Name+" – "+w.tr(r, "tab.backups"), "backups"
 	list, err := w.Store.ListBackups(r.Context(), p.Vault.ID)
 	if err != nil {
 		w.fail(rw, r, 500, err.Error())
@@ -45,10 +45,10 @@ func (w *Web) backupCreate(rw http.ResponseWriter, r *http.Request, p *page) {
 	back := fmt.Sprintf("/vaults/%d/backups", p.Vault.ID)
 	b, err := w.Backup.Create(r.Context(), p.Vault.ID, store.BackupManual)
 	if err != nil {
-		redirect(rw, r, back, "", "Záloha selhala: "+err.Error())
+		redirect(rw, r, back, "", w.tr(r, "msg.backupFailed", w.errText(r, err)))
 		return
 	}
-	redirect(rw, r, back, fmt.Sprintf("Záloha vytvořena (%d souborů).", b.FileCount), "")
+	redirect(rw, r, back, w.tr(r, "msg.backupCreated", b.FileCount), "")
 }
 
 func (w *Web) backupView(rw http.ResponseWriter, r *http.Request, p *page) {
@@ -61,7 +61,7 @@ func (w *Web) backupView(rw http.ResponseWriter, r *http.Request, p *page) {
 		w.fail(rw, r, 500, err.Error())
 		return
 	}
-	p.Title, p.Tab = p.Vault.Name+" – záloha", "backups"
+	p.Title, p.Tab = p.Vault.Name+" – "+w.tr(r, "tab.backups"), "backups"
 	p.D = map[string]any{"Backup": b, "Files": files}
 	w.render(rw, r, "backup", p)
 }
@@ -99,7 +99,7 @@ func (w *Web) backupFile(rw http.ResponseWriter, r *http.Request, b *store.Backu
 			}
 		}
 	}
-	w.fail(rw, r, http.StatusNotFound, "Soubor v záloze nenalezen.")
+	w.fail(rw, r, http.StatusNotFound, w.tr(r, "msg.backupFileNotFound"))
 	return nil
 }
 
@@ -124,10 +124,10 @@ func (w *Web) backupRestoreFile(rw http.ResponseWriter, r *http.Request, p *page
 	}
 	back := fmt.Sprintf("/vaults/%d/backups/%d", p.Vault.ID, b.ID)
 	if err := w.commitForce(r, p, *f); err != nil {
-		redirect(rw, r, back, "", err.Error())
+		redirect(rw, r, back, "", w.errText(r, err))
 		return
 	}
-	redirect(rw, r, back, "Soubor "+f.Path+" byl obnoven ze zálohy.", "")
+	redirect(rw, r, back, w.tr(r, "msg.fileRestoredFromBackup", f.Path), "")
 }
 
 func (w *Web) backupRestore(rw http.ResponseWriter, r *http.Request, p *page) {
@@ -138,11 +138,10 @@ func (w *Web) backupRestore(rw http.ResponseWriter, r *http.Request, p *page) {
 	back := fmt.Sprintf("/vaults/%d/backups", p.Vault.ID)
 	n, err := w.Backup.Restore(r.Context(), b, w.webAuthor(p))
 	if err != nil {
-		redirect(rw, r, back, "", "Obnova selhala: "+err.Error())
+		redirect(rw, r, back, "", w.tr(r, "msg.restoreFailed", w.errText(r, err)))
 		return
 	}
-	redirect(rw, r, back, fmt.Sprintf("Vault obnoven do stavu z %s (%d změn). Předchozí stav je uložen jako záloha „Před obnovou“.",
-		b.CreatedAt.Local().Format("2. 1. 2006 15:04"), n), "")
+	redirect(rw, r, back, w.tr(r, "msg.vaultRestored", w.date(r, b.CreatedAt), n), "")
 }
 
 func (w *Web) backupDelete(rw http.ResponseWriter, r *http.Request, p *page) {
@@ -152,10 +151,10 @@ func (w *Web) backupDelete(rw http.ResponseWriter, r *http.Request, p *page) {
 	}
 	back := fmt.Sprintf("/vaults/%d/backups", p.Vault.ID)
 	if err := w.Backup.Delete(r.Context(), b); err != nil {
-		redirect(rw, r, back, "", err.Error())
+		redirect(rw, r, back, "", w.errText(r, err))
 		return
 	}
-	redirect(rw, r, back, "Záloha smazána.", "")
+	redirect(rw, r, back, w.tr(r, "msg.backupDeleted"), "")
 }
 
 // ---- plugin download ----

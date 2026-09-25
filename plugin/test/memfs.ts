@@ -41,4 +41,14 @@ export class MemFS implements LocalFS {
 	async remove(path: string): Promise<void> {
 		this.files.delete(path);
 	}
+	async trash(path: string): Promise<void> {
+		const f = this.files.get(path);
+		if (!f) return;
+		this.files.delete(path);
+		this.files.set(".trash/" + path, f);
+	}
+	/** Files outside the trash. */
+	notes(): Record<string, string> {
+		return Object.fromEntries(Object.entries(this.snapshot()).filter(([k]) => !k.startsWith(".trash/")));
+	}
 }

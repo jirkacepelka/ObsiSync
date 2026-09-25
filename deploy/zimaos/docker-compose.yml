@@ -1,6 +1,6 @@
-# ObsiSync pro ZimaOS / CasaOS.
-# App Store → „+“ (Custom Install / Import) → vložit tento soubor → Install.
-# Pak otevři http://<ip-zimaos>:8080 a vytvoř administrátora.
+# ObsiSync for ZimaOS / CasaOS.
+# App Store → "+" (Custom install / Import) → paste this file → Install.
+# Then open http://<zimaos-ip>:8080 and create the administrator.
 name: obsisync
 services:
   obsisync:

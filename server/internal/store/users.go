@@ -18,8 +18,9 @@ type User struct {
 
 func (u *User) PasswordHash() string { return u.hash }
 
-var ErrUsernameTaken = errors.New("uživatelské jméno už existuje")
-var ErrInvalidUsername = errors.New("neplatné uživatelské jméno")
+// Error messages are i18n keys, translated by the web UI.
+var ErrUsernameTaken = errors.New("err.usernameTaken")
+var ErrInvalidUsername = errors.New("err.invalidUsername")
 
 func ValidUsername(name string) bool {
 	if len(name) < 2 || len(name) > 64 {

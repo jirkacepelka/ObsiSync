@@ -93,3 +93,6 @@ img.img { max-width: 100%; border-radius: 6px; }
   .me { margin-left: auto; }
   main { padding: .8rem; }
 }
+footer { display: flex; flex-direction: column; align-items: center; gap: .4rem; }
+footer .lang label { display: inline-flex; align-items: center; gap: .4rem; margin: 0; font-weight: 400; }
+footer .lang select { display: inline-block; width: auto; margin: 0; padding: .2rem .4rem; font-size: .85rem; }

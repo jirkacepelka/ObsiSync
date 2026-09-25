@@ -1,7 +1,7 @@
-# ObsiSync na VPS s automatickým HTTPS (Let's Encrypt přes Caddy).
-# 1) Nasměruj DNS záznam typu A (např. sync.mojedomena.cz) na IP adresu VPS.
-# 2) DOMAIN=sync.mojedomena.cz docker compose -f docker-compose.caddy.yml up -d
-# 3) Otevři https://sync.mojedomena.cz a vytvoř administrátora.
+# ObsiSync on a VPS with automatic HTTPS (Let's Encrypt via Caddy).
+# 1) Point a DNS A record (e.g. sync.example.com) at the VPS IP address.
+# 2) DOMAIN=sync.example.com docker compose -f docker-compose.caddy.yml up -d
+# 3) Open https://sync.example.com and create the administrator.
 services:
   obsisync:
     image: ghcr.io/jirkacepelka/obsisync:latest
@@ -19,7 +19,7 @@ services:
       - "443:443"
       - "443:443/udp"
     environment:
-      - DOMAIN=${DOMAIN:?Nastav proměnnou DOMAIN, např. DOMAIN=sync.mojedomena.cz}
+      - DOMAIN=${DOMAIN:?Set DOMAIN, e.g. DOMAIN=sync.example.com}
     command: caddy reverse-proxy --from ${DOMAIN} --to obsisync:8080
     volumes:
       - ./caddy:/data

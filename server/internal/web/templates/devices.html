@@ -1,21 +1,21 @@
 {{define "content"}}
-<h1>Zařízení</h1>
-<p class="muted">Každé přihlášení z pluginu v Obsidianu je jedno zařízení. Odhlášením zařízení mu okamžitě zakážeš přístup.</p>
+<h1>{{$.T "title.devices"}}</h1>
+<p class="muted">{{$.T "devices.hint"}}</p>
 {{$online := index .D "Online"}}
 <table>
-  <thead><tr><th>Zařízení</th>{{if .User.IsAdmin}}<th>Uživatel</th>{{end}}<th>Stav</th><th>Naposledy</th><th>Přihlášeno</th><th></th></tr></thead>
+  <thead><tr><th>{{$.T "col.device"}}</th>{{if .User.IsAdmin}}<th>{{$.T "col.user"}}</th>{{end}}<th>{{$.T "col.status"}}</th><th>{{$.T "col.lastSeen"}}</th><th>{{$.T "col.loggedIn"}}</th><th></th></tr></thead>
   <tbody>
   {{range index .D "Devices"}}
   <tr>
     <td><b>{{.Name}}</b></td>
     {{if $.User.IsAdmin}}<td>{{.Username}}</td>{{end}}
     <td>{{if index $online .ID}}<span class="badge good">online</span>{{else}}<span class="muted">offline</span>{{end}}</td>
-    <td>{{ago .LastSeen}}</td>
-    <td>{{date .CreatedAt}}</td>
-    <td><form method="post" action="/devices/{{.ID}}/delete" onsubmit="return confirm('Odhlásit zařízení {{.Name}}?')"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small danger">Odhlásit</button></form></td>
+    <td>{{$.Ago .LastSeen}}</td>
+    <td>{{$.Date .CreatedAt}}</td>
+    <td><form method="post" action="/devices/{{.ID}}/delete" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{$.T "devices.logoutConfirm" .Name}}"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small danger">{{$.T "nav.logout"}}</button></form></td>
   </tr>
   {{else}}
-  <tr><td colspan="6" class="muted">Zatím žádné zařízení. <a href="/plugin">Jak připojit Obsidian?</a></td></tr>
+  <tr><td colspan="6" class="muted">{{$.T "devices.none"}} <a href="/plugin">{{$.T "devices.howTo"}}</a></td></tr>
   {{end}}
   </tbody>
 </table>

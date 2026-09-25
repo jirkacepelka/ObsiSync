@@ -1,0 +1,87 @@
+// English texts; the source of truth for all keys.
+export const en = {
+	"status.off": "Not connected",
+	"status.pickVault": "Pick a vault in settings",
+	"status.loggedOut": "Not logged in",
+	"status.syncing": "Syncing…",
+	"status.synced": "Synced",
+	"status.syncedReadOnly": "Synced (read only)",
+	"status.expired": "Login expired – log in again",
+	"status.vaultGone": "The vault no longer exists on the server or you lost access",
+	"status.offline": "Server unreachable, will retry",
+	"status.error": "Error: {msg}",
+	"status.massDelete": "Paused: {count} deleted files",
+	"status.clickToSetUp": "ObsiSync is not set up yet. Open Settings → ObsiSync.",
+
+	"cmd.syncNow": "Sync now",
+
+	"notice.conflict": "ObsiSync: conflict in “{path}”.\nYour version was saved as “{copy}”.",
+	"notice.expired": "ObsiSync: the login expired or this device was logged out. Log in again in settings.",
+	"notice.replaced": "ObsiSync: this vault now matches the server. {count} local files were moved to the Obsidian trash (.trash).",
+
+	"massDelete.title": "ObsiSync: delete files on the server?",
+	"massDelete.body": "{count} files that are on the server are missing on this device. If you deleted them on purpose, delete them on the server too. If not, download them again.",
+	"massDelete.redownload": "Download them again",
+	"massDelete.delete": "Delete on the server too",
+
+	"login.intro": "Enter the address of your ObsiSync server and your login.",
+	"login.server": "Server address",
+	"login.serverDesc": "For example https://sync.example.com or 192.168.1.10:8080",
+	"login.name": "Name",
+	"login.password": "Password",
+	"login.button": "Log in",
+	"login.busy": "Logging in…",
+	"login.missing": "Fill in the server address, name and password.",
+
+	"account.loggedIn": "Logged in as {user}",
+	"account.logout": "Log out",
+
+	"vaults.loading": "Loading vaults…",
+	"vaults.refresh": "Refresh list",
+	"vaults.label": "Vault on the server",
+	"vaults.desc": "Pick which server vault to sync with this Obsidian vault.",
+	"vaults.connect": "Connect",
+	"vaults.none": "Your account has no vaults yet.",
+	"vaults.create": "Or create a new vault from this one",
+	"vaults.createDesc": "A new vault is created on the server and this vault's content is uploaded to it.",
+	"vaults.createButton": "Create and connect",
+	"role.owner": "owner",
+	"role.editor": "editor",
+	"role.viewer": "read only",
+
+	"replace.title": "Connect to “{vault}”",
+	"replace.body": "This vault will be replaced by the content from the server. Nothing is uploaded from this device.\n\nFiles that exist only here, or differ from the server, are moved to the Obsidian trash (.trash), so nothing is lost.",
+	"replace.confirm": "Connect",
+	"replace.cancel": "Cancel",
+
+	"connected.title": "Connected to vault “{vault}”",
+	"connected.syncNow": "Sync now",
+	"connected.syncConfig": "Also sync Obsidian settings",
+	"connected.syncConfigDesc": "The .obsidian folder (appearance, plugins, hotkeys). Changes apply after restarting Obsidian.",
+	"connected.disconnect": "Disconnect vault",
+	"connected.disconnectDesc": "Files stay on this device and on the server; they just stop syncing.",
+	"connected.disconnectButton": "Disconnect",
+
+	"err.network": "Server unreachable ({msg})",
+	"err.notObsisync": "No ObsiSync server is running at this address",
+	"err.server": "Server error ({status})",
+	"err.invalid_credentials": "Wrong name or password",
+	"err.rate_limited": "Too many attempts, try again in 15 minutes",
+	"err.unauthorized": "The login expired or this device was logged out. Log in again.",
+	"err.forbidden": "You don't have permission for this",
+	"err.too_large": "The file is larger than the server limit",
+
+	"problem.tooLarge": "{path}: the file is larger than the server limit",
+	"problem.case": "{path}: the server already has {other}, which differs only in letter case",
+	"engine.massDelete": "Syncing would delete {count} files on the server",
+	"engine.missingContent": "content {hash} is missing on the server",
+	"engine.corrupt": "corrupted transfer {hash}",
+	"engine.conflictWord": "conflict",
+	"engine.device": "device",
+	"settings.language": "Language",
+	"settings.languageDesc": "Language of this plugin.",
+	"settings.languageAuto": "Same as Obsidian",
+};
+
+export type Key = keyof typeof en;
+export type Dict = Partial<Record<Key, string>>;

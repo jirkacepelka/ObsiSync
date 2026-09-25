@@ -22,6 +22,7 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/jirkacepelka/obsisync/server/internal/auth"
+	"github.com/jirkacepelka/obsisync/server/internal/i18n"
 	"github.com/jirkacepelka/obsisync/server/internal/store"
 )
 
@@ -392,27 +393,27 @@ func TestWebGUI(t *testing.T) {
 	b := &browser{e: e, c: &http.Client{Jar: jar}}
 
 	// Fresh server redirects to setup.
-	if _, body := b.get("/"); !strings.Contains(body, "Vítej v ObsiSync") {
+	if _, body := b.get("/"); !strings.Contains(body, "Welcome to ObsiSync") {
 		t.Fatal("setup page not shown")
 	}
-	if _, body := b.post("/setup", url.Values{"username": {"admin"}, "password": {"heslo1234"}, "password2": {"heslo1234"}}); !strings.Contains(body, "Server je připravený") {
+	if _, body := b.post("/setup", url.Values{"username": {"admin"}, "password": {"heslo1234"}, "password2": {"heslo1234"}}); !strings.Contains(body, "The server is ready") {
 		t.Fatalf("setup failed: %s", body)
 	}
 	// Setup cannot run twice.
-	if _, body := b.get("/setup"); strings.Contains(body, "Vítej v ObsiSync") {
+	if _, body := b.get("/setup"); strings.Contains(body, "Welcome to ObsiSync") {
 		t.Fatal("setup reachable after first user")
 	}
 
 	b.get("/vaults/new")
-	if !strings.Contains(mustGet(b, "/vaults/new"), "Frekvence záloh") {
+	if !strings.Contains(mustGet(b, "/vaults/new"), "Backup frequency") {
 		t.Fatal("new vault form lacks backup settings")
 	}
 	// Missing backup settings are rejected.
-	if _, body := b.post("/vaults", url.Values{"name": {"Bez záloh"}}); !strings.Contains(body, "Vyber frekvenci") {
+	if _, body := b.post("/vaults", url.Values{"name": {"Bez záloh"}}); !strings.Contains(body, "Pick the backup frequency") {
 		t.Fatalf("vault without backup policy accepted: %s", body)
 	}
 	_, body := b.post("/vaults", url.Values{"name": {"Rodina"}, "backup_interval": {"21600"}, "backup_retention_days": {"90"}})
-	if !strings.Contains(body, "Vault Rodina byl vytvořen") {
+	if !strings.Contains(body, "Vault Rodina was created") {
 		t.Fatalf("create vault: %s", body)
 	}
 	vs, _ := e.app.Store.ListVaults(context.Background())
@@ -420,7 +421,7 @@ func TestWebGUI(t *testing.T) {
 		t.Fatalf("vault policy: %+v", vs[0].Backup)
 	}
 	id := itoa(vs[0].ID)
-	if _, body := b.post("/vaults/"+id+"/backups", url.Values{}); !strings.Contains(body, "Záloha vytvořena") {
+	if _, body := b.post("/vaults/"+id+"/backups", url.Values{}); !strings.Contains(body, "Backup created") {
 		t.Fatalf("manual backup: %s", body)
 	}
 	for _, p := range []string{"/", "/vaults", "/vaults/" + id, "/vaults/" + id + "/trash", "/vaults/" + id + "/backups",
@@ -429,6 +430,25 @@ func TestWebGUI(t *testing.T) {
 			t.Errorf("GET %s: %d", p, st)
 		}
 	}
+	// Every language renders every page without missing keys or template errors.
+	for _, l := range i18n.Languages {
+		b.get("/lang?l=" + l.Code + "&next=/")
+		for _, p := range []string{"/", "/vaults/" + id, "/vaults/" + id + "/backups", "/vaults/" + id + "/settings", "/vaults/new", "/users", "/devices", "/plugin"} {
+			st, body := b.get(p)
+			if st != 200 || !strings.Contains(body, `<html lang="`+l.Code+`">`) || !strings.Contains(body, "</footer>") {
+				t.Errorf("%s %s: status %d or incomplete page", l.Code, p, st)
+			}
+			if m := regexp.MustCompile(`\b(?:nav|tab|col|msg|field|backup|backups|interval|retention|role|kind)\.[a-zA-Z]+\b`).FindString(body); m != "" {
+				t.Errorf("%s %s: untranslated key %q", l.Code, p, m)
+			}
+		}
+	}
+	b.get("/lang?l=cs&next=/")
+	if !strings.Contains(mustGet(b, "/vaults/new"), "Frekvence záloh") {
+		t.Fatal("Czech not applied")
+	}
+	b.get("/lang?l=en&next=/")
+
 	// POST without CSRF token is refused.
 	b.csrf = ""
 	if st, _ := b.post("/users", url.Values{"username": {"x"}, "password": {"heslo1234"}}); st != 403 {

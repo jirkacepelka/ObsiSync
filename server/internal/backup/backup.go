@@ -104,7 +104,7 @@ func (s *Service) create(ctx context.Context, vaultID int64, kind string) (*stor
 	if v.Backup.Zip {
 		p, err := s.writeZipFile(ctx, v, b)
 		if err != nil {
-			return b, fmt.Errorf("ZIP záloha: %w", err)
+			return b, fmt.Errorf("ZIP backup: %w", err)
 		}
 		b.ZipPath = p
 		s.Store.SetBackupZip(ctx, b.ID, p)
@@ -195,7 +195,7 @@ func (s *Service) Restore(ctx context.Context, b *store.Backup, author store.Aut
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, err := s.create(ctx, b.VaultID, store.BackupPreRestore); err != nil {
-		return 0, fmt.Errorf("pre-restore záloha: %w", err)
+		return 0, fmt.Errorf("pre-restore backup: %w", err)
 	}
 	want, err := s.Store.BackupFiles(ctx, b.ID)
 	if err != nil {

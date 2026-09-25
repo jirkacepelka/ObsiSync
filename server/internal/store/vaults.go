@@ -24,32 +24,14 @@ func RoleAtLeast(role, min string) bool {
 }
 
 // Backup intervals offered in the UI (seconds; 0 = off).
-var BackupIntervals = []struct {
-	Seconds int64
-	Label   string
-}{
-	{0, "Vypnuto"},
-	{3600, "Každou hodinu"},
-	{6 * 3600, "Každých 6 hodin"},
-	{86400, "Denně"},
-	{7 * 86400, "Týdně"},
-}
+var BackupIntervals = []int64{0, 3600, 6 * 3600, 86400, 7 * 86400}
 
 // Backup retention choices (days; 0 = keep forever).
-var BackupRetentions = []struct {
-	Days  int
-	Label string
-}{
-	{7, "7 dní"},
-	{30, "30 dní"},
-	{90, "90 dní"},
-	{365, "1 rok"},
-	{0, "Navždy"},
-}
+var BackupRetentions = []int{7, 30, 90, 365, 0}
 
 func ValidBackupInterval(sec int64) bool {
 	for _, i := range BackupIntervals {
-		if i.Seconds == sec {
+		if i == sec {
 			return true
 		}
 	}
@@ -58,7 +40,7 @@ func ValidBackupInterval(sec int64) bool {
 
 func ValidBackupRetention(days int) bool {
 	for _, r := range BackupRetentions {
-		if r.Days == days {
+		if r == days {
 			return true
 		}
 	}
@@ -84,8 +66,13 @@ type Vault struct {
 	Role            string // role of the requesting user (filled by list helpers)
 }
 
-var ErrVaultNameTaken = errors.New("vault s tímto názvem už existuje")
-var ErrInvalidVaultName = errors.New("neplatný název vaultu")
+// Error messages are i18n keys, translated by the web UI.
+var (
+	ErrVaultNameTaken      = errors.New("err.vaultNameTaken")
+	ErrInvalidVaultName    = errors.New("err.invalidVaultName")
+	ErrInvalidBackupPolicy = errors.New("err.invalidBackupPolicy")
+	ErrInvalidRole         = errors.New("err.invalidRole")
+)
 
 const vaultCols = "id, name, head_rev, backup_interval, backup_retention_days, backup_zip, last_backup_at, last_backup_error, created_at"
 
@@ -115,7 +102,7 @@ func (s *Store) CreateVault(ctx context.Context, name string, policy BackupPolic
 		return nil, ErrInvalidVaultName
 	}
 	if !ValidBackupInterval(policy.IntervalSec) || !ValidBackupRetention(policy.RetentionDays) {
-		return nil, errors.New("neplatné nastavení záloh")
+		return nil, ErrInvalidBackupPolicy
 	}
 	var id int64
 	err := s.tx(ctx, func(tx *sql.Tx) error {
@@ -157,7 +144,7 @@ func (s *Store) RenameVault(ctx context.Context, id int64, name string) error {
 
 func (s *Store) SetBackupPolicy(ctx context.Context, id int64, p BackupPolicy) error {
 	if !ValidBackupInterval(p.IntervalSec) || !ValidBackupRetention(p.RetentionDays) {
-		return errors.New("neplatné nastavení záloh")
+		return ErrInvalidBackupPolicy
 	}
 	_, err := s.db.ExecContext(ctx, "UPDATE vaults SET backup_interval = ?, backup_retention_days = ?, backup_zip = ? WHERE id = ?",
 		p.IntervalSec, p.RetentionDays, boolInt(p.Zip), id)
@@ -248,7 +235,7 @@ func (s *Store) Members(ctx context.Context, vaultID int64) ([]Member, error) {
 
 func (s *Store) SetMember(ctx context.Context, vaultID, userID int64, role string) error {
 	if !ValidRole(role) {
-		return errors.New("neplatná role")
+		return ErrInvalidRole
 	}
 	_, err := s.db.ExecContext(ctx, "INSERT INTO vault_members(vault_id, user_id, role) VALUES(?, ?, ?) ON CONFLICT(vault_id, user_id) DO UPDATE SET role = excluded.role",
 		vaultID, userID, role)

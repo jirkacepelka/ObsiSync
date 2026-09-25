@@ -6,19 +6,19 @@
     <a href="/vaults/{{$v.ID}}">📁 {{$v.Name}}</a>
     {{range index .D "Crumbs"}} / <a href="/vaults/{{$v.ID}}?dir={{q .Path}}">{{.Name}}</a>{{end}}
   </div>
-  <div class="muted">{{(index .D "Stats").Files}} souborů · {{bytes (index .D "Stats").Bytes}} · <a href="/vaults/{{$v.ID}}/zip">Stáhnout vše (ZIP)</a></div>
+  <div class="muted">{{$.T "files.summary" (index .D "Stats").Files (bytes (index .D "Stats").Bytes)}} · <a href="/vaults/{{$v.ID}}/zip">{{$.T "files.downloadAll"}}</a></div>
 </div>
 <table>
-  <thead><tr><th>Název</th><th>Velikost</th><th>Změněno</th></tr></thead>
+  <thead><tr><th>{{$.T "col.name"}}</th><th>{{$.T "col.size"}}</th><th>{{$.T "col.modified"}}</th></tr></thead>
   <tbody>
   {{range index .D "Entries"}}
     {{if .IsDir}}
-    <tr><td><a href="/vaults/{{$v.ID}}?dir={{q .Path}}">📁 {{.Name}}</a></td><td class="muted">{{.Count}} souborů</td><td></td></tr>
+    <tr><td><a href="/vaults/{{$v.ID}}?dir={{q .Path}}">📁 {{.Name}}</a></td><td class="muted">{{$.T "files.count" .Count}}</td><td></td></tr>
     {{else}}
-    <tr><td><a href="/vaults/{{$v.ID}}/file?path={{q .Path}}">📄 {{.Name}}</a></td><td>{{bytes .File.Size}}</td><td>{{date (ms .File.Mtime)}}</td></tr>
+    <tr><td><a href="/vaults/{{$v.ID}}/file?path={{q .Path}}">📄 {{.Name}}</a></td><td>{{bytes .File.Size}}</td><td>{{$.Date (ms .File.Mtime)}}</td></tr>
     {{end}}
   {{else}}
-    <tr><td colspan="3" class="muted">Vault je zatím prázdný. Připoj ho v Obsidianu přes plugin ObsiSync.</td></tr>
+    <tr><td colspan="3" class="muted">{{$.T "files.empty"}}</td></tr>
   {{end}}
   </tbody>
 </table>

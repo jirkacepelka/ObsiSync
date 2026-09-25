@@ -18,6 +18,7 @@ import (
 	"github.com/jirkacepelka/obsisync/server/internal/auth"
 	"github.com/jirkacepelka/obsisync/server/internal/blobs"
 	"github.com/jirkacepelka/obsisync/server/internal/hub"
+	"github.com/jirkacepelka/obsisync/server/internal/i18n"
 	"github.com/jirkacepelka/obsisync/server/internal/store"
 )
 
@@ -94,12 +95,12 @@ func (a *API) authed(h func(http.ResponseWriter, *http.Request, *reqCtx)) http.H
 	return func(w http.ResponseWriter, r *http.Request) {
 		tok := bearer(r)
 		if tok == "" {
-			writeErr(w, http.StatusUnauthorized, "unauthorized", "Chybí přihlášení")
+			writeErr(w, http.StatusUnauthorized, "unauthorized", "Not logged in")
 			return
 		}
 		dev, user, err := a.Store.DeviceByToken(r.Context(), auth.HashToken(tok))
 		if err != nil {
-			writeErr(w, http.StatusUnauthorized, "unauthorized", "Přihlášení vypršelo nebo bylo zařízení odebráno. Přihlas se znovu.")
+			writeErr(w, http.StatusUnauthorized, "unauthorized", "The login expired or this device was logged out. Log in again.")
 			return
 		}
 		h(w, r, &reqCtx{user: user, device: dev})
@@ -110,21 +111,21 @@ func (a *API) vault(minRole string, h func(http.ResponseWriter, *http.Request, *
 	return a.authed(func(w http.ResponseWriter, r *http.Request, c *reqCtx) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 		if err != nil {
-			writeErr(w, http.StatusNotFound, "not_found", "Vault neexistuje")
+			writeErr(w, http.StatusNotFound, "not_found", "Vault not found")
 			return
 		}
 		role, err := a.Store.Role(r.Context(), c.user, id)
 		if err != nil || role == "" {
-			writeErr(w, http.StatusNotFound, "not_found", "Vault neexistuje nebo k němu nemáš přístup")
+			writeErr(w, http.StatusNotFound, "not_found", "Vault not found or you have no access")
 			return
 		}
 		if !store.RoleAtLeast(role, minRole) {
-			writeErr(w, http.StatusForbidden, "forbidden", "K tomuto vaultu máš jen přístup pro čtení")
+			writeErr(w, http.StatusForbidden, "forbidden", "You have read-only access to this vault")
 			return
 		}
 		v, err := a.Store.Vault(r.Context(), id)
 		if err != nil {
-			writeErr(w, http.StatusNotFound, "not_found", "Vault neexistuje")
+			writeErr(w, http.StatusNotFound, "not_found", "Vault not found")
 			return
 		}
 		c.vault, c.role = v, role
@@ -145,18 +146,18 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) {
 		DeviceName string `json:"device_name"`
 	}
 	if err := readJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", "Neplatný požadavek")
+		writeErr(w, http.StatusBadRequest, "bad_request", "Invalid request")
 		return
 	}
 	key := ClientIP(r) + "|" + strings.ToLower(req.Username)
 	if !a.Limiter.Allowed(key) {
-		writeErr(w, http.StatusTooManyRequests, "rate_limited", "Příliš mnoho pokusů, zkus to za 15 minut")
+		writeErr(w, http.StatusTooManyRequests, "rate_limited", "Too many attempts, try again in 15 minutes")
 		return
 	}
 	u, err := a.Store.UserByName(r.Context(), req.Username)
 	if err != nil || !auth.CheckPassword(u.PasswordHash(), req.Password) {
 		a.Limiter.Fail(key)
-		writeErr(w, http.StatusUnauthorized, "invalid_credentials", "Špatné jméno nebo heslo")
+		writeErr(w, http.StatusUnauthorized, "invalid_credentials", "Wrong name or password")
 		return
 	}
 	a.Limiter.Reset(key)
@@ -179,10 +180,11 @@ func (a *API) me(w http.ResponseWriter, r *http.Request, c *reqCtx) {
 }
 
 type vaultJSON struct {
-	ID      int64  `json:"id"`
-	Name    string `json:"name"`
-	Role    string `json:"role"`
-	HeadRev int64  `json:"head_rev"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Role      string `json:"role"`
+	HeadRev   int64  `json:"head_rev"`
+	FileCount int64  `json:"file_count"`
 }
 
 func (a *API) userVaults(ctx context.Context, u *store.User) ([]*store.Vault, error) {
@@ -200,7 +202,8 @@ func (a *API) listVaults(w http.ResponseWriter, r *http.Request, c *reqCtx) {
 	}
 	out := []vaultJSON{}
 	for _, v := range vs {
-		out = append(out, vaultJSON{v.ID, v.Name, v.Role, v.HeadRev})
+		st, _ := a.Store.VaultStats(r.Context(), v.ID)
+		out = append(out, vaultJSON{v.ID, v.Name, v.Role, v.HeadRev, st.Files})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"vaults":     out,
@@ -210,14 +213,14 @@ func (a *API) listVaults(w http.ResponseWriter, r *http.Request, c *reqCtx) {
 
 func (a *API) createVault(w http.ResponseWriter, r *http.Request, c *reqCtx) {
 	if !c.user.IsAdmin && !a.Store.Settings(r.Context()).UsersCanCreateVaults {
-		writeErr(w, http.StatusForbidden, "forbidden", "Nové vaulty může zakládat jen administrátor")
+		writeErr(w, http.StatusForbidden, "forbidden", "Only an administrator can create vaults")
 		return
 	}
 	var req struct {
 		Name string `json:"name"`
 	}
 	if err := readJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", "Neplatný požadavek")
+		writeErr(w, http.StatusBadRequest, "bad_request", "Invalid request")
 		return
 	}
 	v, err := a.Store.CreateVault(r.Context(), req.Name, store.DefaultBackupPolicy, c.user.ID)
@@ -226,10 +229,10 @@ func (a *API) createVault(w http.ResponseWriter, r *http.Request, c *reqCtx) {
 		if errors.Is(err, store.ErrVaultNameTaken) {
 			status = http.StatusConflict
 		}
-		writeErr(w, status, "invalid", err.Error())
+		writeErr(w, status, "invalid", i18n.Err("en", err))
 		return
 	}
-	writeJSON(w, http.StatusCreated, vaultJSON{v.ID, v.Name, store.RoleOwner, v.HeadRev})
+	writeJSON(w, http.StatusCreated, vaultJSON{v.ID, v.Name, store.RoleOwner, v.HeadRev, 0})
 }
 
 func (a *API) changes(w http.ResponseWriter, r *http.Request, c *reqCtx) {
@@ -254,7 +257,7 @@ func (a *API) missingBlobs(w http.ResponseWriter, r *http.Request, c *reqCtx) {
 		Hashes []string `json:"hashes"`
 	}
 	if err := readJSON(r, &req); err != nil || len(req.Hashes) > 10000 {
-		writeErr(w, http.StatusBadRequest, "bad_request", "Neplatný požadavek")
+		writeErr(w, http.StatusBadRequest, "bad_request", "Invalid request")
 		return
 	}
 	missing := []string{}
@@ -276,15 +279,15 @@ func (a *API) putBlob(w http.ResponseWriter, r *http.Request, c *reqCtx) {
 	hash := r.PathValue("hash")
 	max := a.Store.Settings(r.Context()).MaxFileMB << 20
 	if r.ContentLength > max {
-		writeErr(w, http.StatusRequestEntityTooLarge, "too_large", "Soubor je větší než povolený limit")
+		writeErr(w, http.StatusRequestEntityTooLarge, "too_large", "The file is larger than the server limit")
 		return
 	}
 	n, err := a.Blobs.Put(hash, r.Body, max)
 	switch {
 	case errors.Is(err, blobs.ErrTooLarge):
-		writeErr(w, http.StatusRequestEntityTooLarge, "too_large", "Soubor je větší než povolený limit")
+		writeErr(w, http.StatusRequestEntityTooLarge, "too_large", "The file is larger than the server limit")
 	case errors.Is(err, blobs.ErrHashMismatch), errors.Is(err, blobs.ErrInvalidHash):
-		writeErr(w, http.StatusBadRequest, "hash_mismatch", "Obsah neodpovídá hashi")
+		writeErr(w, http.StatusBadRequest, "hash_mismatch", "Content does not match its hash")
 	case err != nil:
 		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
 	default:
@@ -295,12 +298,12 @@ func (a *API) putBlob(w http.ResponseWriter, r *http.Request, c *reqCtx) {
 func (a *API) getBlob(w http.ResponseWriter, r *http.Request, c *reqCtx) {
 	hash := r.PathValue("hash")
 	if in, err := a.Store.HashInVault(r.Context(), c.vault.ID, hash); err != nil || !in {
-		writeErr(w, http.StatusNotFound, "not_found", "Obsah nenalezen")
+		writeErr(w, http.StatusNotFound, "not_found", "Content not found")
 		return
 	}
 	f, err := a.Blobs.Open(hash)
 	if err != nil {
-		writeErr(w, http.StatusNotFound, "not_found", "Obsah nenalezen")
+		writeErr(w, http.StatusNotFound, "not_found", "Content not found")
 		return
 	}
 	defer f.Close()
@@ -314,7 +317,7 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request, c *reqCtx) {
 		Ops []store.Op `json:"ops"`
 	}
 	if err := readJSON(r, &req); err != nil || len(req.Ops) == 0 || len(req.Ops) > maxOpsPerCommit {
-		writeErr(w, http.StatusBadRequest, "bad_request", "Neplatný požadavek")
+		writeErr(w, http.StatusBadRequest, "bad_request", "Invalid request")
 		return
 	}
 	author := store.Author{DeviceID: c.device.ID, Name: c.user.Username + " (" + c.device.Name + ")"}

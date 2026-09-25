@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -39,7 +40,7 @@ func (w *Web) visibleVaults(r *http.Request, u *store.User) ([]vaultRow, error) 
 }
 
 func (w *Web) dashboard(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Nav = "Přehled", "home"
+	p.Title, p.Nav = w.tr(r, "title.overview"), "home"
 	vaults, err := w.visibleVaults(r, p.User)
 	if err != nil {
 		w.fail(rw, r, 500, err.Error())
@@ -63,7 +64,7 @@ func (w *Web) dashboard(rw http.ResponseWriter, r *http.Request, p *page) {
 }
 
 func (w *Web) vaultList(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Nav = "Vaulty", "vaults"
+	p.Title, p.Nav = w.tr(r, "title.vaults"), "vaults"
 	vaults, err := w.visibleVaults(r, p.User)
 	if err != nil {
 		w.fail(rw, r, 500, err.Error())
@@ -74,7 +75,7 @@ func (w *Web) vaultList(rw http.ResponseWriter, r *http.Request, p *page) {
 }
 
 func (w *Web) vaultNewForm(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Nav = "Nový vault", "vaults"
+	p.Title, p.Nav = w.tr(r, "title.newVault"), "vaults"
 	users, _ := w.Store.ListUsers(r.Context())
 	p.D = map[string]any{"Users": users, "Interval": store.DefaultBackupPolicy.IntervalSec, "Retention": store.DefaultBackupPolicy.RetentionDays}
 	w.render(rw, r, "vault_new", p)
@@ -90,12 +91,12 @@ func backupPolicyFromForm(r *http.Request) store.BackupPolicy {
 
 func (w *Web) vaultCreate(rw http.ResponseWriter, r *http.Request, p *page) {
 	if r.FormValue("backup_interval") == "" || r.FormValue("backup_retention_days") == "" {
-		redirect(rw, r, "/vaults/new", "", "Vyber frekvenci a dobu držení záloh.")
+		redirect(rw, r, "/vaults/new", "", w.tr(r, "msg.pickBackupPolicy"))
 		return
 	}
 	v, err := w.Store.CreateVault(r.Context(), r.FormValue("name"), backupPolicyFromForm(r), 0)
 	if err != nil {
-		redirect(rw, r, "/vaults/new", "", err.Error())
+		redirect(rw, r, "/vaults/new", "", w.errText(r, err))
 		return
 	}
 	r.ParseForm()
@@ -106,7 +107,7 @@ func (w *Web) vaultCreate(rw http.ResponseWriter, r *http.Request, p *page) {
 			w.Store.SetMember(r.Context(), v.ID, id, store.RoleOwner)
 		}
 	}
-	redirect(rw, r, fmt.Sprintf("/vaults/%d", v.ID), "Vault "+v.Name+" byl vytvořen. V Obsidianu ho teď vybereš v nastavení pluginu ObsiSync.", "")
+	redirect(rw, r, fmt.Sprintf("/vaults/%d", v.ID), w.tr(r, "msg.vaultCreated", v.Name), "")
 }
 
 // ---- file browser ----
@@ -208,7 +209,7 @@ func (w *Web) fileHistory(rw http.ResponseWriter, r *http.Request, p *page) {
 	p.Title, p.Tab = path.Base(fp), "files"
 	versions, err := w.Store.Versions(r.Context(), p.Vault.ID, fp)
 	if err != nil || len(versions) == 0 {
-		w.fail(rw, r, http.StatusNotFound, "Soubor nenalezen (historie mohla být smazána podle nastavené retence).")
+		w.fail(rw, r, http.StatusNotFound, w.tr(r, "msg.fileNotFound"))
 		return
 	}
 	sel := versions[0]
@@ -286,9 +287,9 @@ func (w *Web) commitForce(r *http.Request, p *page, e store.FileEntry) error {
 	}
 	if !res[0].OK {
 		if res[0].Error == store.ErrCodeCaseConflict {
-			return fmt.Errorf("v cílové složce už existuje soubor %s (liší se jen velikostí písmen)", res[0].Current.Path)
+			return errors.New(w.tr(r, "msg.caseConflict", res[0].Current.Path))
 		}
-		return fmt.Errorf("obnova se nezdařila: %s", res[0].Error)
+		return errors.New(w.tr(r, "msg.restoreFailed", res[0].Error))
 	}
 	w.Hub.Notify(p.Vault.ID, head)
 	return nil
@@ -302,14 +303,14 @@ func (w *Web) versionRestore(rw http.ResponseWriter, r *http.Request, p *page) {
 	}
 	back := "/vaults/" + r.PathValue("id") + "/file?path=" + url.QueryEscape(v.Path)
 	if err := w.commitForce(r, p, v.FileEntry); err != nil {
-		redirect(rw, r, back, "", err.Error())
+		redirect(rw, r, back, "", w.errText(r, err))
 		return
 	}
-	redirect(rw, r, back, "Verze z "+v.CreatedAt.Local().Format("2. 1. 2006 15:04")+" byla obnovena a synchronizuje se do zařízení.", "")
+	redirect(rw, r, back, w.tr(r, "msg.versionRestored", w.date(r, v.CreatedAt)), "")
 }
 
 func (w *Web) trash(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Tab = p.Vault.Name+" – koš", "trash"
+	p.Title, p.Tab = p.Vault.Name+" – "+w.tr(r, "tab.trash"), "trash"
 	files, err := w.Store.ListFiles(r.Context(), p.Vault.ID, true)
 	if err != nil {
 		w.fail(rw, r, 500, err.Error())
@@ -335,7 +336,7 @@ func (w *Web) vaultZip(rw http.ResponseWriter, r *http.Request, p *page) {
 // ---- members & settings ----
 
 func (w *Web) members(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Tab = p.Vault.Name+" – členové", "members"
+	p.Title, p.Tab = p.Vault.Name+" – "+w.tr(r, "tab.members"), "members"
 	members, err := w.Store.Members(r.Context(), p.Vault.ID)
 	if err != nil {
 		w.fail(rw, r, 500, err.Error())
@@ -360,29 +361,29 @@ func (w *Web) memberSet(rw http.ResponseWriter, r *http.Request, p *page) {
 		u, err = w.Store.UserByID(r.Context(), formInt(r, "user_id"))
 	}
 	if err != nil {
-		redirect(rw, r, back, "", "Uživatel neexistuje.")
+		redirect(rw, r, back, "", w.tr(r, "msg.userNotFound"))
 		return
 	}
 	if err := w.Store.SetMember(r.Context(), p.Vault.ID, u.ID, r.FormValue("role")); err != nil {
-		redirect(rw, r, back, "", err.Error())
+		redirect(rw, r, back, "", w.errText(r, err))
 		return
 	}
-	redirect(rw, r, back, "Uživatel "+u.Username+" má teď přístup k vaultu.", "")
+	redirect(rw, r, back, w.tr(r, "msg.memberAdded", u.Username), "")
 }
 
 func (w *Web) memberRemove(rw http.ResponseWriter, r *http.Request, p *page) {
 	back := "/vaults/" + r.PathValue("id") + "/members"
 	uid := formInt(r, "user_id")
 	if uid == p.User.ID && !p.User.IsAdmin {
-		redirect(rw, r, back, "", "Nemůžeš odebrat sám sebe.")
+		redirect(rw, r, back, "", w.tr(r, "msg.cannotRemoveSelf"))
 		return
 	}
 	w.Store.RemoveMember(r.Context(), p.Vault.ID, uid)
-	redirect(rw, r, back, "Člen byl odebrán.", "")
+	redirect(rw, r, back, w.tr(r, "msg.memberRemoved"), "")
 }
 
 func (w *Web) vaultSettings(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Tab = p.Vault.Name+" – nastavení", "settings"
+	p.Title, p.Tab = p.Vault.Name+" – "+w.tr(r, "tab.settings"), "settings"
 	w.render(rw, r, "vault_settings", p)
 }
 
@@ -390,21 +391,21 @@ func (w *Web) vaultSettingsSave(rw http.ResponseWriter, r *http.Request, p *page
 	back := "/vaults/" + r.PathValue("id") + "/settings"
 	if name := strings.TrimSpace(r.FormValue("name")); name != p.Vault.Name {
 		if err := w.Store.RenameVault(r.Context(), p.Vault.ID, name); err != nil {
-			redirect(rw, r, back, "", err.Error())
+			redirect(rw, r, back, "", w.errText(r, err))
 			return
 		}
 	}
 	if err := w.Store.SetBackupPolicy(r.Context(), p.Vault.ID, backupPolicyFromForm(r)); err != nil {
-		redirect(rw, r, back, "", err.Error())
+		redirect(rw, r, back, "", w.errText(r, err))
 		return
 	}
-	redirect(rw, r, back, "Nastavení uloženo.", "")
+	redirect(rw, r, back, w.tr(r, "msg.settingsSaved"), "")
 }
 
 func (w *Web) vaultDelete(rw http.ResponseWriter, r *http.Request, p *page) {
 	back := "/vaults/" + r.PathValue("id") + "/settings"
 	if r.FormValue("confirm") != p.Vault.Name {
-		redirect(rw, r, back, "", "Pro smazání opiš přesný název vaultu.")
+		redirect(rw, r, back, "", w.tr(r, "msg.confirmVaultName"))
 		return
 	}
 	backups, _ := w.Store.ListBackups(r.Context(), p.Vault.ID)
@@ -412,8 +413,8 @@ func (w *Web) vaultDelete(rw http.ResponseWriter, r *http.Request, p *page) {
 		w.Backup.Delete(r.Context(), b)
 	}
 	if err := w.Store.DeleteVault(r.Context(), p.Vault.ID); err != nil {
-		redirect(rw, r, back, "", err.Error())
+		redirect(rw, r, back, "", w.errText(r, err))
 		return
 	}
-	redirect(rw, r, "/vaults", "Vault "+p.Vault.Name+" byl smazán.", "")
+	redirect(rw, r, "/vaults", w.tr(r, "msg.vaultDeleted", p.Vault.Name), "")
 }

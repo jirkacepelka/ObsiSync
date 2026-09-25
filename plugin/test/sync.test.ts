@@ -21,10 +21,12 @@ class Device {
 	conflicts: string[] = [];
 	constructor(public name: string) {}
 
-	async connect(vaultId: number) {
+	client!: Client;
+	async connect(vaultId: number, initialFromServer = false) {
 		const client = new Client(server.url, "", fetchHttp);
 		await client.login("admin", "heslo1234", this.name);
-		const state: SyncState = { vaultId, lastRev: 0, base: {} };
+		this.client = client;
+		const state: SyncState = { vaultId, lastRev: 0, base: {}, initialFromServer };
 		this.engine = new SyncEngine({
 			fs: this.fs,
 			client,
@@ -107,7 +109,7 @@ describe("sync engine against a real server", () => {
 		expect(res.conflicts).toBe(1);
 		expect(b.fs.get("n.md")).toBe("verze A\n");
 		const copy = b.conflicts[0];
-		expect(copy).toMatch(/^n \(konflikt .* iPhone\)\.md$/);
+		expect(copy).toMatch(/^n \(conflict .* iPhone\)\.md$/);
 		expect(b.fs.get(copy)).toBe("verze B\n");
 		await a.sync();
 		expect(a.fs.snapshot()).toEqual(b.fs.snapshot());
@@ -182,15 +184,77 @@ describe("sync engine against a real server", () => {
 		expect(res.pushed).toBe(30);
 	});
 
-	it("preferRemote overwrites local differences on first connect", async () => {
-		const [a, b] = await pair();
+	it("an empty device joining a full vault downloads everything and changes nothing on the server", async () => {
+		const id = await newVault();
+		const a = await new Device("A").connect(id);
+		a.fs.set("n.md", "server");
+		a.fs.set("dir/x.md", "x");
+		await a.sync();
+		const head = (await a.client.changes(id, 0)).head;
+
+		const b = await new Device("B").connect(id, true);
+		const r = await b.sync();
+		expect(b.fs.snapshot()).toEqual(a.fs.snapshot());
+		expect(r.pushed).toBe(0);
+		expect((await b.client.changes(id, 0)).head).toBe(head);
+	});
+
+	it("joining a full vault replaces local content with the server's and uploads nothing", async () => {
+		const id = await newVault();
+		const a = await new Device("A").connect(id);
+		a.fs.set("n.md", "server");
+		a.fs.set("same.md", "same");
+		await a.sync();
+		const head = (await a.client.changes(id, 0)).head;
+
+		const b = await new Device("B").connect(id, true);
+		b.fs.set("Welcome.md", "default note");
+		b.fs.set("n.md", "local version");
+		b.fs.set("same.md", "same");
+		const r = await b.sync();
+		expect(b.fs.notes()).toEqual({ "n.md": "server", "same.md": "same" });
+		expect(b.fs.get(".trash/Welcome.md")).toBe("default note");
+		expect(b.fs.get(".trash/n.md")).toBe("local version");
+		expect(r.trashed).toBe(2);
+		expect((await b.client.changes(id, 0)).head).toBe(head);
+		expect(b.engine.state.initialFromServer).toBe(false);
+
+		// Afterwards the device syncs normally.
+		b.fs.set("n.md", "edited on B");
+		await b.sync();
+		await a.sync();
+		expect(a.fs.get("n.md")).toBe("edited on B");
+	});
+
+	it("an interrupted first connect stays in server-first mode", async () => {
+		const id = await newVault();
+		const a = await new Device("A").connect(id);
 		a.fs.set("n.md", "server");
 		await a.sync();
-		b.fs.set("n.md", "lokální");
-		b.engine.preferRemote = true;
+
+		const b = await new Device("B").connect(id, true);
+		b.fs.set("n.md", "local");
+		const realChanges = b.client.changes.bind(b.client);
+		b.client.changes = async () => {
+			throw new Error("network down");
+		};
+		await expect(b.sync()).rejects.toThrow("network down");
+		expect(b.engine.state.initialFromServer).toBe(true);
+		b.client.changes = realChanges;
 		await b.sync();
 		expect(b.fs.get("n.md")).toBe("server");
-		expect(b.conflicts).toEqual([]);
+		expect(b.fs.get(".trash/n.md")).toBe("local");
+	});
+
+	it("connecting to an empty server vault uploads the local vault", async () => {
+		const id = await newVault();
+		const b = await new Device("B").connect(id, false);
+		b.fs.set("mine.md", "moje");
+		const r = await b.sync();
+		expect(r.pushed).toBe(1);
+		const c = await new Device("C").connect(id, true);
+		await c.sync();
+		expect(c.fs.notes()).toEqual({ "mine.md": "moje" });
 	});
 
 	it("paginates large change feeds", async () => {

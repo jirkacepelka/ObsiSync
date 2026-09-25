@@ -63,6 +63,13 @@ export class ObsidianFS implements LocalFS {
 		return { path, size: st?.size ?? data.byteLength, mtime: st?.mtime ?? opts.mtime };
 	}
 
+	async trash(path: string): Promise<void> {
+		path = normalizePath(path);
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (file instanceof TFile) await this.app.vault.trash(file, false);
+		else if (await this.adapter.exists(path)) await this.adapter.trashLocal(path);
+	}
+
 	async remove(path: string): Promise<void> {
 		path = normalizePath(path);
 		const file = this.app.vault.getAbstractFileByPath(path);

@@ -1,5 +1,5 @@
-# ObsiSync – nejjednodušší varianta (domácí síť, NAS, ZimaOS přes SSH).
-# Spuštění:  docker compose up -d   → pak otevři http://<ip-serveru>:8080
+# ObsiSync – the simplest setup (home network, NAS, ZimaOS over SSH).
+# Start:  docker compose up -d   → then open http://<server-ip>:8080
 services:
   obsisync:
     image: ghcr.io/jirkacepelka/obsisync:latest

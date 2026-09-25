@@ -1,49 +1,50 @@
 {{define "vaultnav"}}
 <div class="vhead">
-  <h1><a href="/vaults">Vaulty</a> / {{.Vault.Name}}</h1>
-  <span class="badge">{{roleLabel .Role}}</span>
+  <h1><a href="/vaults">{{$.T "nav.vaults"}}</a> / {{.Vault.Name}}</h1>
+  <span class="badge">{{$.RoleName .Role}}</span>
 </div>
 <nav class="tabs">
-  <a href="/vaults/{{.Vault.ID}}" {{if eq .Tab "files"}}class="on"{{end}}>Soubory</a>
-  <a href="/vaults/{{.Vault.ID}}/trash" {{if eq .Tab "trash"}}class="on"{{end}}>Koš</a>
-  <a href="/vaults/{{.Vault.ID}}/backups" {{if eq .Tab "backups"}}class="on"{{end}}>Zálohy</a>
+  <a href="/vaults/{{.Vault.ID}}" {{if eq .Tab "files"}}class="on"{{end}}>{{$.T "tab.files"}}</a>
+  <a href="/vaults/{{.Vault.ID}}/trash" {{if eq .Tab "trash"}}class="on"{{end}}>{{$.T "tab.trash"}}</a>
+  <a href="/vaults/{{.Vault.ID}}/backups" {{if eq .Tab "backups"}}class="on"{{end}}>{{$.T "tab.backups"}}</a>
   {{if atLeast .Role "owner"}}
-  <a href="/vaults/{{.Vault.ID}}/members" {{if eq .Tab "members"}}class="on"{{end}}>Členové</a>
-  <a href="/vaults/{{.Vault.ID}}/settings" {{if eq .Tab "settings"}}class="on"{{end}}>Nastavení</a>
+  <a href="/vaults/{{.Vault.ID}}/members" {{if eq .Tab "members"}}class="on"{{end}}>{{$.T "tab.members"}}</a>
+  <a href="/vaults/{{.Vault.ID}}/settings" {{if eq .Tab "settings"}}class="on"{{end}}>{{$.T "tab.settings"}}</a>
   {{end}}
 </nav>
 {{end}}
 {{define "backupfields"}}
+{{$p := .P}}
 <div class="grid2">
-  <label>Frekvence záloh
+  <label>{{$p.T "backup.frequency"}}
     <select name="backup_interval" required>
       {{$cur := .Interval}}
-      {{range intervals}}<option value="{{.Seconds}}" {{if eq .Seconds $cur}}selected{{end}}>{{.Label}}</option>{{end}}
+      {{range intervals}}<option value="{{.}}" {{if eq . $cur}}selected{{end}}>{{$p.Interval .}}</option>{{end}}
     </select>
   </label>
-  <label>Doba držení záloh
+  <label>{{$p.T "backup.retention"}}
     <select name="backup_retention_days" required>
       {{$ret := .Retention}}
-      {{range retentions}}<option value="{{.Days}}" {{if eq .Days $ret}}selected{{end}}>{{.Label}}</option>{{end}}
+      {{range retentions}}<option value="{{.}}" {{if eq . $ret}}selected{{end}}>{{$p.Retention .}}</option>{{end}}
     </select>
   </label>
 </div>
-<label class="check"><input type="checkbox" name="backup_zip" value="1" {{if .Zip}}checked{{end}}> Ukládat každou zálohu i jako samostatný ZIP soubor (do složky záloh na serveru – vhodné pro kopírování na jiný disk)</label>
-<p class="muted">Záloha se vytvoří jen tehdy, když se vault od poslední zálohy změnil. Nejnovější záloha se nikdy nemaže.</p>
+<label class="check"><input type="checkbox" name="backup_zip" value="1" {{if .Zip}}checked{{end}}> {{$p.T "backup.zip"}}</label>
+<p class="muted">{{$p.T "backup.hint"}}</p>
 {{end}}
 {{define "vaulttable"}}
 {{with index .D "Vaults"}}
 <table>
-  <thead><tr><th>Vault</th><th>Soubory</th><th>Velikost</th><th>Zálohy</th><th>Poslední záloha</th><th>Tvoje role</th></tr></thead>
+  <thead><tr><th>{{$.T "col.vault"}}</th><th>{{$.T "col.files"}}</th><th>{{$.T "col.size"}}</th><th>{{$.T "col.backups"}}</th><th>{{$.T "col.lastBackup"}}</th><th>{{$.T "col.yourRole"}}</th></tr></thead>
   <tbody>
   {{range .}}
   <tr>
     <td><a href="/vaults/{{.ID}}"><b>{{.Name}}</b></a></td>
     <td>{{.Stats.Files}}</td>
     <td>{{bytes .Stats.Bytes}}</td>
-    <td>{{intervalLabel .Backup.IntervalSec}}, drží {{retentionLabel .Backup.RetentionDays}}</td>
-    <td>{{datep .LastBackupAt}}{{if .LastBackupError}} <span class="badge bad">chyba</span>{{end}}</td>
-    <td>{{roleLabel .Role}}</td>
+    <td>{{$.T "vaults.schedule" ($.Interval .Backup.IntervalSec) ($.Retention .Backup.RetentionDays)}}</td>
+    <td>{{$.DateP .LastBackupAt}}{{if .LastBackupError}} <span class="badge bad">{{$.T "badge.error"}}</span>{{end}}</td>
+    <td>{{$.RoleName .Role}}</td>
   </tr>
   {{end}}
   </tbody>

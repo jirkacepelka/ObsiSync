@@ -1,17 +1,17 @@
 {{define "content"}}
-<h1><a href="/vaults">Vaulty</a> / Nový vault</h1>
+<h1><a href="/vaults">{{$.T "nav.vaults"}}</a> / {{$.T "title.newVault"}}</h1>
 <form method="post" action="/vaults" class="card">
   <input type="hidden" name="_csrf" value="{{.CSRF}}">
-  <label>Název vaultu <input name="name" required autofocus maxlength="100" placeholder="např. Osobní poznámky"></label>
-  <h2>Zálohy</h2>
-  {{template "backupfields" .D}}
-  <h2>Kdo bude mít přístup</h2>
-  <p class="muted">Vybraní uživatelé budou vlastníky vaultu. Další členy a jejich role nastavíš později v záložce Členové.</p>
+  <label>{{$.T "field.vaultName"}} <input name="name" required autofocus maxlength="100" placeholder="{{$.T "field.vaultNamePlaceholder"}}"></label>
+  <h2>{{$.T "tab.backups"}}</h2>
+  {{template "backupfields" (dict "P" $ "Interval" (index .D "Interval") "Retention" (index .D "Retention") "Zip" false)}}
+  <h2>{{$.T "newVault.access"}}</h2>
+  <p class="muted">{{$.T "newVault.accessHint"}}</p>
   <div class="checks">
   {{range index .D "Users"}}
     <label class="check"><input type="checkbox" name="members" value="{{.ID}}" {{if eq .ID $.User.ID}}checked{{end}}> {{.Username}}</label>
   {{end}}
   </div>
-  <button class="primary">Vytvořit vault</button>
+  <button class="primary">{{$.T "newVault.button"}}</button>
 </form>
 {{end}}

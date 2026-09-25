@@ -3,6 +3,7 @@ import { ApiError, Client, type VaultInfo } from "./engine/client";
 import { MassDeleteError, SyncEngine } from "./engine/engine";
 import { makeIgnore } from "./engine/ignore";
 import type { Http, SyncState } from "./engine/types";
+import { setLanguage, t } from "./i18n";
 import { ObsidianFS } from "./obsidian-fs";
 import { ConfirmModal, ObsiSyncSettingTab } from "./settings";
 
@@ -13,9 +14,11 @@ export interface Settings {
 	vaultId: number | null;
 	vaultName: string;
 	syncConfig: boolean;
+	/** "auto" (follow Obsidian) or a language code. */
+	language: string;
 }
 
-const DEFAULTS: Settings = { serverUrl: "", username: "", token: "", vaultId: null, vaultName: "", syncConfig: false };
+const DEFAULTS: Settings = { serverUrl: "", username: "", token: "", vaultId: null, vaultName: "", syncConfig: false, language: "auto" };
 
 export type Status = { kind: "off" | "idle" | "syncing" | "error" | "offline"; text: string; at?: Date };
 
@@ -40,7 +43,7 @@ const obsidianHttp: Http = async (req) => {
 
 export default class ObsiSyncPlugin extends Plugin {
 	settings: Settings = { ...DEFAULTS };
-	status: Status = { kind: "off", text: "Nepřipojeno" };
+	status: Status = { kind: "off", text: t("status.off") };
 	onStatusChange?: () => void;
 
 	private engine: SyncEngine | null = null;
@@ -67,12 +70,13 @@ export default class ObsiSyncPlugin extends Plugin {
 
 	async onload() {
 		this.settings = { ...DEFAULTS, ...(await this.loadData()) };
+		setLanguage(this.settings.language);
 		this.addSettingTab(new ObsiSyncSettingTab(this.app, this));
 
 		this.statusEl = this.addStatusBarItem();
 		this.statusEl.addClass("obsisync-status");
-		this.statusEl.onClickEvent(() => (this.connected ? this.requestSync(0) : this.openSettings()));
-		this.addCommand({ id: "sync-now", name: "Synchronizovat nyní", callback: () => this.requestSync(0) });
+		this.statusEl.onClickEvent(() => (this.connected ? this.requestSync(0) : new Notice(t("status.clickToSetUp"))));
+		this.addCommand({ id: "sync-now", name: t("cmd.syncNow"), callback: () => this.requestSync(0) });
 
 		this.app.workspace.onLayoutReady(async () => {
 			const onChange = (f: TAbstractFile) => {
@@ -90,7 +94,7 @@ export default class ObsiSyncPlugin extends Plugin {
 				}
 			});
 			if (this.connected) await this.start();
-			else this.setStatus({ kind: "off", text: this.settings.token ? "Vyber vault v nastavení" : "Nepřihlášeno" });
+			else this.setStatus({ kind: "off", text: this.settings.token ? t("status.pickVault") : t("status.loggedOut") });
 		});
 	}
 
@@ -103,10 +107,10 @@ export default class ObsiSyncPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	openSettings() {
-		const setting = (this.app as any).setting;
-		setting?.open();
-		setting?.openTabById(this.manifest.id);
+	async setLanguage(code: string) {
+		this.settings.language = code;
+		setLanguage(code);
+		await this.saveSettings();
 	}
 
 	// ---- state ----
@@ -136,16 +140,15 @@ export default class ObsiSyncPlugin extends Plugin {
 			saveState: (s) => this.saveState(s),
 			ignore: makeIgnore({ configDir: this.app.vault.configDir, syncConfig: this.settings.syncConfig, pluginId: this.manifest.id }),
 			deviceName: this.deviceName,
-			log: (m) => console.log("[ObsiSync]", m),
-			onConflict: (path, copy) => new Notice(`ObsiSync: konflikt v „${path}“.\nTvoje verze je uložena jako „${copy}“.`, 15000),
+			log: (m) => console.debug("[ObsiSync]", m),
+			onConflict: (path, copy) => new Notice(t("notice.conflict", { path, copy }), 15000),
 		});
 	}
 
 	/** Starts syncing the configured vault (after load or after connecting). */
-	async start(preferRemote = false) {
+	async start() {
 		const state = (await this.loadState()) ?? { vaultId: this.settings.vaultId!, lastRev: 0, base: {} };
 		this.engine = this.makeEngine(state);
-		this.engine.preferRemote = preferRemote;
 		this.openSocket();
 		this.requestSync(0);
 	}
@@ -171,7 +174,7 @@ export default class ObsiSyncPlugin extends Plugin {
 		const token = await client.login(username, password, this.deviceName);
 		this.settings = { ...this.settings, serverUrl, username, token, vaultId: null, vaultName: "" };
 		await this.saveSettings();
-		this.setStatus({ kind: "off", text: "Vyber vault v nastavení" });
+		this.setStatus({ kind: "off", text: t("status.pickVault") });
 	}
 
 	async logout() {
@@ -183,16 +186,22 @@ export default class ObsiSyncPlugin extends Plugin {
 		}
 		this.settings.token = "";
 		await this.saveSettings();
-		this.setStatus({ kind: "off", text: "Nepřihlášeno" });
+		this.setStatus({ kind: "off", text: t("status.loggedOut") });
 	}
 
-	async connect(vault: VaultInfo, preferRemote: boolean) {
+	/**
+	 * Connects this Obsidian vault to a server vault. If the server vault has
+	 * content, this vault becomes a copy of it (local differences go to the
+	 * trash, nothing is uploaded); an empty server vault receives this one.
+	 */
+	async connect(vault: VaultInfo) {
 		await this.disconnect();
 		this.settings.vaultId = vault.id;
 		this.settings.vaultName = vault.name;
 		await this.saveSettings();
-		await this.saveState({ vaultId: vault.id, lastRev: 0, base: {} });
-		await this.start(preferRemote);
+		const serverHasContent = (vault.file_count ?? vault.head_rev) > 0;
+		await this.saveState({ vaultId: vault.id, lastRev: 0, base: {}, initialFromServer: serverHasContent });
+		await this.start();
 	}
 
 	async disconnect() {
@@ -202,7 +211,7 @@ export default class ObsiSyncPlugin extends Plugin {
 		this.settings.vaultId = null;
 		this.settings.vaultName = "";
 		await this.saveSettings();
-		this.setStatus({ kind: "off", text: "Vyber vault v nastavení" });
+		this.setStatus({ kind: "off", text: t("status.pickVault") });
 	}
 
 	// ---- sync loop ----
@@ -224,11 +233,12 @@ export default class ObsiSyncPlugin extends Plugin {
 		}
 		const engine = this.engine;
 		this.running = (async () => {
-			this.setStatus({ kind: "syncing", text: "Synchronizuji…" });
+			this.setStatus({ kind: "syncing", text: t("status.syncing") });
 			try {
 				const r = await engine.sync();
 				for (const p of r.problems) new Notice(`ObsiSync: ${p}`, 10000);
-				this.setStatus({ kind: "idle", text: r.readOnly ? "Synchronizováno (jen čtení)" : "Synchronizováno", at: new Date() });
+				if (r.trashed) new Notice(t("notice.replaced", { count: r.trashed }), 15000);
+				this.setStatus({ kind: "idle", text: r.readOnly ? t("status.syncedReadOnly") : t("status.synced"), at: new Date() });
 			} catch (e) {
 				await this.handleError(e);
 			}
@@ -244,15 +254,15 @@ export default class ObsiSyncPlugin extends Plugin {
 	private async handleError(e: unknown) {
 		console.error("[ObsiSync]", e);
 		if (e instanceof MassDeleteError) {
-			this.setStatus({ kind: "error", text: `Pozastaveno: ${e.count} smazaných souborů` });
+			this.setStatus({ kind: "error", text: t("status.massDelete", { count: e.count }) });
 			new ConfirmModal(
 				this.app,
-				"ObsiSync: smazat soubory na serveru?",
-				`V tomto zařízení chybí ${e.count} souborů, které jsou na serveru. Pokud jsi je smazal(a) záměrně, smaž je i na serveru. Pokud ne, stáhni je zpět.`,
+				t("massDelete.title"),
+				t("massDelete.body", { count: e.count }),
 				[
-					{ label: "Stáhnout zpět ze serveru", cta: true, action: () => this.redownload() },
+					{ label: t("massDelete.redownload"), cta: true, action: () => this.redownload() },
 					{
-						label: "Smazat i na serveru",
+						label: t("massDelete.delete"),
 						warning: true,
 						action: () => {
 							if (this.engine) this.engine.allowMassDelete = true;
@@ -267,20 +277,20 @@ export default class ObsiSyncPlugin extends Plugin {
 			if (e.status === 401) {
 				this.closeSocket();
 				this.engine = null;
-				this.setStatus({ kind: "error", text: "Přihlášení vypršelo – přihlas se znovu" });
-				new Notice("ObsiSync: přihlášení vypršelo nebo bylo zařízení odhlášeno. Přihlas se znovu v nastavení.", 15000);
+				this.setStatus({ kind: "error", text: t("status.expired") });
+				new Notice(t("notice.expired"), 15000);
 				return;
 			}
 			if (e.status === 404 && e.code === "not_found") {
-				this.setStatus({ kind: "error", text: "Vault už na serveru neexistuje nebo k němu nemáš přístup" });
+				this.setStatus({ kind: "error", text: t("status.vaultGone") });
 				return;
 			}
 			if (e.status === 0) {
-				this.setStatus({ kind: "offline", text: "Server nedostupný, zkusím později" });
+				this.setStatus({ kind: "offline", text: t("status.offline") });
 				return;
 			}
 		}
-		this.setStatus({ kind: "error", text: `Chyba: ${e instanceof Error ? e.message : String(e)}` });
+		this.setStatus({ kind: "error", text: t("status.error", { msg: e instanceof Error ? e.message : String(e) }) });
 	}
 
 	/** Forgets what was synced so that missing files are downloaded again. */

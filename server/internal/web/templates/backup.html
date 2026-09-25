@@ -2,20 +2,20 @@
 {{template "vaultnav" .}}
 {{$v := .Vault}}{{$b := index .D "Backup"}}
 <div class="row">
-  <div><a href="/vaults/{{$v.ID}}/backups">← Zálohy</a> · <b>Záloha z {{date $b.CreatedAt}}</b> ({{kindLabel $b.Kind}}, {{$b.FileCount}} souborů, {{bytes $b.SizeBytes}})</div>
-  <a class="button" href="/vaults/{{$v.ID}}/backups/{{$b.ID}}/zip">Stáhnout ZIP</a>
+  <div><a href="/vaults/{{$v.ID}}/backups">← {{$.T "tab.backups"}}</a> · <b>{{$.T "backup.from" ($.Date $b.CreatedAt)}}</b> ({{$.Kind $b.Kind}}, {{$.T "files.summary" $b.FileCount (bytes $b.SizeBytes)}})</div>
+  <a class="button" href="/vaults/{{$v.ID}}/backups/{{$b.ID}}/zip">{{$.T "backup.downloadZip"}}</a>
 </div>
 <table>
-  <thead><tr><th>Soubor</th><th>Velikost</th><th>Změněno</th><th></th></tr></thead>
+  <thead><tr><th>{{$.T "col.file"}}</th><th>{{$.T "col.size"}}</th><th>{{$.T "col.modified"}}</th><th></th></tr></thead>
   <tbody>
   {{range index .D "Files"}}
   <tr>
     <td><a href="/vaults/{{$v.ID}}/backups/{{$b.ID}}/raw?path={{q .Path}}">{{.Path}}</a></td>
     <td>{{bytes .Size}}</td>
-    <td>{{date (ms .Mtime)}}</td>
+    <td>{{$.Date (ms .Mtime)}}</td>
     <td>{{if atLeast $.Role "editor"}}
       <form method="post" action="/vaults/{{$v.ID}}/backups/{{$b.ID}}/restore-file">
-        <input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="path" value="{{.Path}}"><button class="small">Obnovit soubor</button>
+        <input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="path" value="{{.Path}}"><button class="small">{{$.T "backup.restoreFile"}}</button>
       </form>{{end}}</td>
   </tr>
   {{end}}

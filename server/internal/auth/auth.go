@@ -56,7 +56,7 @@ func CheckPassword(encoded, pw string) bool {
 	return subtle.ConstantTimeCompare(got, want) == 1
 }
 
-var ErrWeakPassword = errors.New("heslo musí mít alespoň 8 znaků")
+var ErrWeakPassword = errors.New("err.weakPassword") // i18n key
 
 func ValidatePassword(pw string) error {
 	if len([]rune(pw)) < 8 {

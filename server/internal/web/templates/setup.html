@@ -1,12 +1,13 @@
 {{define "content"}}
 <div class="card narrow">
-  <h1>Vítej v ObsiSync 👋</h1>
-  <p>Server běží. Zbývá jediný krok: vytvoř si <b>administrátorský účet</b>. Tímto účtem se pak můžeš přihlásit i v Obsidianu.</p>
+  <h1>{{$.T "setup.heading"}} 👋</h1>
+  <p>{{$.T "setup.intro"}}</p>
   <form method="post" action="/setup">
-    <label>Uživatelské jméno <input name="username" required autofocus autocomplete="username" value="{{index .D "Username"}}" pattern="[A-Za-z0-9._@\-]{2,64}"></label>
-    <label>Heslo (min. 8 znaků) <input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
-    <label>Heslo znovu <input type="password" name="password2" required minlength="8" autocomplete="new-password"></label>
-    <button class="primary">Vytvořit účet a začít</button>
+    <label>{{$.T "field.username"}} <input name="username" required autofocus autocomplete="username" value="{{index .D "Username"}}" pattern="[A-Za-z0-9._@\-]{2,64}"></label>
+    <label>{{$.T "field.passwordMin"}} <input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+    <label>{{$.T "field.passwordAgain"}} <input type="password" name="password2" required minlength="8" autocomplete="new-password"></label>
+    <p class="muted">{{$.T "field.usernameHint"}}</p>
+    <button class="primary">{{$.T "setup.button"}}</button>
   </form>
 </div>
 {{end}}

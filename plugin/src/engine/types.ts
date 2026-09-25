@@ -15,6 +15,8 @@ export interface LocalFS {
 	/** Writes a file (creating parent folders) and returns its resulting stat. */
 	write(path: string, data: ArrayBuffer, mtime: number): Promise<FileStat>;
 	remove(path: string): Promise<void>;
+	/** Moves a file to the local trash (kept on this device, never synced). */
+	trash(path: string): Promise<void>;
 }
 
 export interface HttpRequest {
@@ -44,6 +46,12 @@ export interface SyncState {
 	vaultId: number;
 	lastRev: number;
 	base: Record<string, BaseEntry>;
+	/**
+	 * Set when connecting to a vault that already has content on the server:
+	 * until the first sync completes, this device becomes an exact copy of the
+	 * server and uploads nothing.
+	 */
+	initialFromServer?: boolean;
 }
 
 export interface RemoteEntry {
