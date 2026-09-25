@@ -1,0 +1,5 @@
+{{define "content"}}
+<div class="row"><h1>Vaulty</h1>{{if .User.IsAdmin}}<a class="button primary" href="/vaults/new">+ Nový vault</a>{{end}}</div>
+{{template "vaulttable" .}}
+{{if not (index .D "Vaults")}}<p class="muted">Žádné vaulty.</p>{{end}}
+{{end}}

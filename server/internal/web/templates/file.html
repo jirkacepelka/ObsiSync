@@ -1,0 +1,36 @@
+{{define "content"}}
+{{template "vaultnav" .}}
+{{$v := .Vault}}{{$sel := index .D "Sel"}}{{$cur := index .D "Current"}}
+<div class="crumbs"><a href="/vaults/{{$v.ID}}?dir={{q (index .D "Dir")}}">← zpět do složky</a></div>
+<h2>{{index .D "Path"}} {{if $cur.Deleted}}<span class="badge bad">smazáno</span>{{end}}</h2>
+<div class="split">
+  <section class="preview card">
+    <div class="row">
+      <b>Verze z {{date $sel.CreatedAt}}</b>
+      {{if not $sel.Deleted}}<a class="button" href="/vaults/{{$v.ID}}/version/{{$sel.ID}}">Stáhnout</a>{{end}}
+    </div>
+    {{with index .D "Text"}}<pre class="text">{{.}}</pre>
+    {{else}}{{if index .D "Image"}}<img class="img" src="/vaults/{{$v.ID}}/version/{{$sel.ID}}?inline=1" alt="">
+    {{else}}<p class="muted">Náhled není k dispozici – soubor si stáhni.</p>{{end}}{{end}}
+  </section>
+  <section class="card">
+    <h3>Historie verzí</h3>
+    <ul class="versions">
+    {{range index .D "Versions"}}
+      <li {{if eq .ID $sel.ID}}class="on"{{end}}>
+        <div>
+          {{if .Deleted}}<span class="badge bad">smazáno</span>{{else}}<a href="?path={{q .Path}}&v={{.ID}}">{{date .CreatedAt}}</a>{{end}}
+          <span class="muted">{{.Author}}{{if not .Deleted}} · {{bytes .Size}}{{end}}</span>
+        </div>
+        {{if and (not .Deleted) (atLeast $.Role "editor") (or $cur.Deleted (ne .Hash $cur.Hash))}}
+        <form method="post" action="/vaults/{{$v.ID}}/version/{{.ID}}/restore">
+          <input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small">Obnovit</button>
+        </form>
+        {{end}}
+      </li>
+    {{end}}
+    </ul>
+    <p class="muted">Staré verze se drží podle nastavení serveru; celé snímky vaultu najdeš v záložce Zálohy.</p>
+  </section>
+</div>
+{{end}}

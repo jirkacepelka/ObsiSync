@@ -1,0 +1,26 @@
+{{define "content"}}
+<h1>Připojení Obsidianu</h1>
+<div class="card">
+  <h2>1. Nainstaluj plugin ObsiSync</h2>
+  {{if index .D "Available"}}
+  <p><a class="button primary" href="/plugin/obsisync.zip">Stáhnout plugin (ZIP)</a></p>
+  <ol>
+    <li>Rozbal ZIP do složky <code>&lt;tvůj vault&gt;/.obsidian/plugins/</code> (vznikne složka <code>obsisync</code>).</li>
+    <li>V Obsidianu otevři <b>Nastavení → Komunitní pluginy</b>, vypni omezený režim a zapni <b>ObsiSync</b>.</li>
+  </ol>
+  <p class="muted">Na telefonu je nejsnazší použít plugin <b>BRAT</b> (Beta Reviewers Auto-update Tester) s repozitářem <code>jirkacepelka/ObsiSync</code>, nebo zkopírovat složku pluginu z počítače.</p>
+  {{else}}
+  <p>Tento build serveru neobsahuje soubory pluginu. Stáhni je z GitHub Releases repozitáře <code>jirkacepelka/ObsiSync</code>, nebo použij plugin BRAT.</p>
+  {{end}}
+</div>
+<div class="card">
+  <h2>2. Přihlas se</h2>
+  <p>V nastavení pluginu ObsiSync vyplň:</p>
+  <table class="kv">
+    <tr><th>Adresa serveru</th><td><code>{{index .D "ServerURL"}}</code></td></tr>
+    <tr><th>Jméno</th><td><code>{{.User.Username}}</code></td></tr>
+    <tr><th>Heslo</th><td>tvoje heslo</td></tr>
+  </table>
+  <p>Klikni na <b>Přihlásit</b>, vyber vault ze seznamu a klikni na <b>Připojit</b>. Hotovo.</p>
+</div>
+{{end}}

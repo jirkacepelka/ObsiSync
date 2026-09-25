@@ -1,0 +1,31 @@
+{{define "content"}}
+<h1>Přehled</h1>
+<div class="stats">
+  <div class="stat"><b>{{len (index .D "Vaults")}}</b><span>vaultů</span></div>
+  <div class="stat"><b>{{index .D "Online"}}</b><span>zařízení online</span></div>
+  {{if .User.IsAdmin}}
+  <div class="stat"><b>{{index .D "Users"}}</b><span>uživatelů</span></div>
+  <div class="stat"><b>{{bytes (index .D "Disk")}}</b><span>obsazeno na disku</span></div>
+  {{end}}
+</div>
+{{with index .D "Failing"}}
+<div class="flash err"><b>Některé zálohy selhaly:</b>
+  <ul>{{range .}}<li><a href="/vaults/{{.ID}}/backups">{{.Name}}</a>: {{.LastBackupError}}</li>{{end}}</ul>
+</div>
+{{end}}
+{{template "vaulttable" .}}
+{{if not (index .D "Vaults")}}
+<div class="card">
+  {{if .User.IsAdmin}}
+  <h2>Začni tady</h2>
+  <ol>
+    <li><a href="/vaults/new">Vytvoř vault</a> (nebo ho vytvoř přímo z Obsidianu tlačítkem „Vytvořit nový vault z tohoto“).</li>
+    <li><a href="/plugin">Nainstaluj plugin ObsiSync</a> do Obsidianu.</li>
+    <li>V pluginu vyplň adresu serveru, jméno a heslo a vyber vault.</li>
+  </ol>
+  {{else}}
+  <p>Zatím nemáš přístup k žádnému vaultu. Požádej administrátora, nebo si vytvoř vault z Obsidianu.</p>
+  {{end}}
+</div>
+{{end}}
+{{end}}

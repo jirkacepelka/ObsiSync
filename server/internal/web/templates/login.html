@@ -1,0 +1,11 @@
+{{define "content"}}
+<div class="card narrow">
+  <h1>Přihlášení</h1>
+  <form method="post" action="/login">
+    <input type="hidden" name="next" value="{{index .D "Next"}}">
+    <label>Uživatelské jméno <input name="username" required autofocus autocomplete="username" value="{{index .D "Username"}}"></label>
+    <label>Heslo <input type="password" name="password" required autocomplete="current-password"></label>
+    <button class="primary">Přihlásit</button>
+  </form>
+</div>
+{{end}}

@@ -1,0 +1,16 @@
+{{define "content"}}
+<h1>Nastavení serveru</h1>
+{{$s := index .D "S"}}
+<form method="post" action="/settings" class="card">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <div class="grid2">
+    <label>Jak dlouho držet historii verzí jednotlivých souborů (dny, 0 = navždy)
+      <input type="number" name="version_retention_days" min="0" value="{{$s.VersionRetentionDays}}"></label>
+    <label>Maximální velikost jednoho souboru (MB)
+      <input type="number" name="max_file_mb" min="1" max="10240" value="{{$s.MaxFileMB}}"></label>
+  </div>
+  <label class="check"><input type="checkbox" name="users_can_create_vaults" value="1" {{if $s.UsersCanCreateVaults}}checked{{end}}> Běžní uživatelé mohou z Obsidianu zakládat nové vaulty</label>
+  <p class="muted">Nové vaulty založené z Obsidianu dostanou výchozí plán záloh (denně, držet 30 dní) – změníš ho v nastavení vaultu.</p>
+  <button class="primary">Uložit</button>
+</form>
+{{end}}

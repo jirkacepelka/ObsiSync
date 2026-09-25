@@ -1,0 +1,272 @@
+package store
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"strings"
+	"time"
+)
+
+// Vault roles, from least to most privileged.
+const (
+	RoleViewer = "viewer"
+	RoleEditor = "editor"
+	RoleOwner  = "owner"
+)
+
+func ValidRole(r string) bool { return r == RoleViewer || r == RoleEditor || r == RoleOwner }
+
+// RoleAtLeast reports whether role grants at least the privileges of min.
+func RoleAtLeast(role, min string) bool {
+	rank := map[string]int{RoleViewer: 1, RoleEditor: 2, RoleOwner: 3}
+	return rank[role] >= rank[min]
+}
+
+// Backup intervals offered in the UI (seconds; 0 = off).
+var BackupIntervals = []struct {
+	Seconds int64
+	Label   string
+}{
+	{0, "Vypnuto"},
+	{3600, "Každou hodinu"},
+	{6 * 3600, "Každých 6 hodin"},
+	{86400, "Denně"},
+	{7 * 86400, "Týdně"},
+}
+
+// Backup retention choices (days; 0 = keep forever).
+var BackupRetentions = []struct {
+	Days  int
+	Label string
+}{
+	{7, "7 dní"},
+	{30, "30 dní"},
+	{90, "90 dní"},
+	{365, "1 rok"},
+	{0, "Navždy"},
+}
+
+func ValidBackupInterval(sec int64) bool {
+	for _, i := range BackupIntervals {
+		if i.Seconds == sec {
+			return true
+		}
+	}
+	return false
+}
+
+func ValidBackupRetention(days int) bool {
+	for _, r := range BackupRetentions {
+		if r.Days == days {
+			return true
+		}
+	}
+	return false
+}
+
+type BackupPolicy struct {
+	IntervalSec   int64
+	RetentionDays int
+	Zip           bool
+}
+
+var DefaultBackupPolicy = BackupPolicy{IntervalSec: 86400, RetentionDays: 30}
+
+type Vault struct {
+	ID              int64
+	Name            string
+	HeadRev         int64
+	Backup          BackupPolicy
+	LastBackupAt    *time.Time
+	LastBackupError string
+	CreatedAt       time.Time
+	Role            string // role of the requesting user (filled by list helpers)
+}
+
+var ErrVaultNameTaken = errors.New("vault s tímto názvem už existuje")
+var ErrInvalidVaultName = errors.New("neplatný název vaultu")
+
+const vaultCols = "id, name, head_rev, backup_interval, backup_retention_days, backup_zip, last_backup_at, last_backup_error, created_at"
+
+func scanVault(row interface{ Scan(...any) error }, extra ...any) (*Vault, error) {
+	var v Vault
+	var last sql.NullInt64
+	var created int64
+	dest := append([]any{&v.ID, &v.Name, &v.HeadRev, &v.Backup.IntervalSec, &v.Backup.RetentionDays, &v.Backup.Zip, &last, &v.LastBackupError, &created}, extra...)
+	if err := row.Scan(dest...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if last.Valid {
+		t := time.Unix(last.Int64, 0)
+		v.LastBackupAt = &t
+	}
+	v.CreatedAt = time.Unix(created, 0)
+	return &v, nil
+}
+
+// CreateVault creates a vault; if ownerID is non-zero that user becomes owner.
+func (s *Store) CreateVault(ctx context.Context, name string, policy BackupPolicy, ownerID int64) (*Vault, error) {
+	name = strings.TrimSpace(name)
+	if name == "" || len(name) > 100 || strings.ContainsAny(name, "/\\") {
+		return nil, ErrInvalidVaultName
+	}
+	if !ValidBackupInterval(policy.IntervalSec) || !ValidBackupRetention(policy.RetentionDays) {
+		return nil, errors.New("neplatné nastavení záloh")
+	}
+	var id int64
+	err := s.tx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.Exec("INSERT INTO vaults(name, backup_interval, backup_retention_days, backup_zip, created_at) VALUES(?, ?, ?, ?, ?)",
+			name, policy.IntervalSec, policy.RetentionDays, boolInt(policy.Zip), s.now())
+		if err != nil {
+			if strings.Contains(err.Error(), "UNIQUE") {
+				return ErrVaultNameTaken
+			}
+			return err
+		}
+		id, _ = res.LastInsertId()
+		if ownerID != 0 {
+			_, err = tx.Exec("INSERT INTO vault_members(vault_id, user_id, role) VALUES(?, ?, ?)", id, ownerID, RoleOwner)
+		}
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.Vault(ctx, id)
+}
+
+func (s *Store) Vault(ctx context.Context, id int64) (*Vault, error) {
+	return scanVault(s.db.QueryRowContext(ctx, "SELECT "+vaultCols+" FROM vaults WHERE id = ?", id))
+}
+
+func (s *Store) RenameVault(ctx context.Context, id int64, name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" || len(name) > 100 || strings.ContainsAny(name, "/\\") {
+		return ErrInvalidVaultName
+	}
+	_, err := s.db.ExecContext(ctx, "UPDATE vaults SET name = ? WHERE id = ?", name, id)
+	if err != nil && strings.Contains(err.Error(), "UNIQUE") {
+		return ErrVaultNameTaken
+	}
+	return err
+}
+
+func (s *Store) SetBackupPolicy(ctx context.Context, id int64, p BackupPolicy) error {
+	if !ValidBackupInterval(p.IntervalSec) || !ValidBackupRetention(p.RetentionDays) {
+		return errors.New("neplatné nastavení záloh")
+	}
+	_, err := s.db.ExecContext(ctx, "UPDATE vaults SET backup_interval = ?, backup_retention_days = ?, backup_zip = ? WHERE id = ?",
+		p.IntervalSec, p.RetentionDays, boolInt(p.Zip), id)
+	return err
+}
+
+func (s *Store) DeleteVault(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM vaults WHERE id = ?", id)
+	return err
+}
+
+// ListVaults returns every vault (for admins) with Role set to "owner".
+func (s *Store) ListVaults(ctx context.Context) ([]*Vault, error) {
+	return s.queryVaults(ctx, "SELECT "+vaultCols+", 'owner' FROM vaults ORDER BY name")
+}
+
+// UserVaults returns the vaults a user is a member of, with their role.
+func (s *Store) UserVaults(ctx context.Context, userID int64) ([]*Vault, error) {
+	return s.queryVaults(ctx, "SELECT "+prefixed("v.", vaultCols)+", m.role FROM vaults v JOIN vault_members m ON m.vault_id = v.id WHERE m.user_id = ? ORDER BY v.name", userID)
+}
+
+func prefixed(p, cols string) string {
+	parts := strings.Split(cols, ", ")
+	for i := range parts {
+		parts[i] = p + parts[i]
+	}
+	return strings.Join(parts, ", ")
+}
+
+func (s *Store) queryVaults(ctx context.Context, q string, args ...any) ([]*Vault, error) {
+	rows, err := s.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*Vault
+	for rows.Next() {
+		var role string
+		v, err := scanVault(rows, &role)
+		if err != nil {
+			return nil, err
+		}
+		v.Role = role
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
+// Role returns the role user has in vault ("" if none). Admins are treated as
+// owners of every vault.
+func (s *Store) Role(ctx context.Context, u *User, vaultID int64) (string, error) {
+	if u.IsAdmin {
+		if _, err := s.Vault(ctx, vaultID); err != nil {
+			return "", err
+		}
+		return RoleOwner, nil
+	}
+	var role string
+	err := s.db.QueryRowContext(ctx, "SELECT role FROM vault_members WHERE vault_id = ? AND user_id = ?", vaultID, u.ID).Scan(&role)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return role, err
+}
+
+type Member struct {
+	UserID   int64
+	Username string
+	Role     string
+}
+
+func (s *Store) Members(ctx context.Context, vaultID int64) ([]Member, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT u.id, u.username, m.role FROM vault_members m JOIN users u ON u.id = m.user_id WHERE m.vault_id = ? ORDER BY u.username", vaultID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Member
+	for rows.Next() {
+		var m Member
+		if err := rows.Scan(&m.UserID, &m.Username, &m.Role); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) SetMember(ctx context.Context, vaultID, userID int64, role string) error {
+	if !ValidRole(role) {
+		return errors.New("neplatná role")
+	}
+	_, err := s.db.ExecContext(ctx, "INSERT INTO vault_members(vault_id, user_id, role) VALUES(?, ?, ?) ON CONFLICT(vault_id, user_id) DO UPDATE SET role = excluded.role",
+		vaultID, userID, role)
+	return err
+}
+
+func (s *Store) RemoveMember(ctx context.Context, vaultID, userID int64) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM vault_members WHERE vault_id = ? AND user_id = ?", vaultID, userID)
+	return err
+}
+
+type VaultStats struct {
+	Files int64
+	Bytes int64
+}
+
+func (s *Store) VaultStats(ctx context.Context, vaultID int64) (VaultStats, error) {
+	var st VaultStats
+	err := s.db.QueryRowContext(ctx, "SELECT COUNT(*), COALESCE(SUM(size), 0) FROM files WHERE vault_id = ? AND deleted = 0", vaultID).Scan(&st.Files, &st.Bytes)
+	return st, err
+}

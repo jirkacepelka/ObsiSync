@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · ObsiSync</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/"><img src="/static/icon.svg" alt=""> ObsiSync</a>
+  {{if .User}}
+  <nav>
+    <a href="/" {{if eq .Nav "home"}}class="on"{{end}}>Přehled</a>
+    <a href="/vaults" {{if eq .Nav "vaults"}}class="on"{{end}}>Vaulty</a>
+    {{if .User.IsAdmin}}<a href="/users" {{if eq .Nav "users"}}class="on"{{end}}>Uživatelé</a>{{end}}
+    <a href="/devices" {{if eq .Nav "devices"}}class="on"{{end}}>Zařízení</a>
+    <a href="/plugin" {{if eq .Nav "plugin"}}class="on"{{end}}>Plugin</a>
+    {{if .User.IsAdmin}}<a href="/settings" {{if eq .Nav "settings"}}class="on"{{end}}>Nastavení</a>{{end}}
+  </nav>
+  <div class="me">
+    <a href="/account" {{if eq .Nav "account"}}class="on"{{end}}>{{.User.Username}}</a>
+    <form method="post" action="/logout"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="link">Odhlásit</button></form>
+  </div>
+  {{end}}
+</header>
+<main>
+{{if .OK}}<div class="flash ok">{{.OK}}</div>{{end}}
+{{if .Err}}<div class="flash err">{{.Err}}</div>{{end}}
+{{template "content" .}}
+</main>
+<footer>ObsiSync {{.Version}}</footer>
+</body>
+</html>

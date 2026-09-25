@@ -1,0 +1,37 @@
+{{define "content"}}
+<h1>Uživatelé</h1>
+<table>
+  <thead><tr><th>Jméno</th><th>Role</th><th>Vytvořen</th><th>Nové heslo</th><th></th></tr></thead>
+  <tbody>
+  {{range index .D "Users"}}
+  <tr>
+    <td><b>{{.Username}}</b></td>
+    <td>
+      <form method="post" action="/users/{{.ID}}/admin" class="inline"><input type="hidden" name="_csrf" value="{{$.CSRF}}">
+        {{if .IsAdmin}}<span class="badge">Administrátor</span> <button class="small link">odebrat</button>{{else}}Uživatel <button class="small link">udělat adminem</button>{{end}}
+      </form>
+    </td>
+    <td>{{date .CreatedAt}}</td>
+    <td>
+      <form method="post" action="/users/{{.ID}}/password" class="inline"><input type="hidden" name="_csrf" value="{{$.CSRF}}">
+        <input type="password" name="password" placeholder="nové heslo" minlength="8" required autocomplete="new-password"><button class="small">Nastavit</button>
+      </form>
+    </td>
+    <td>{{if ne .ID $.User.ID}}
+      <form method="post" action="/users/{{.ID}}/delete" onsubmit="return confirm('Smazat uživatele {{.Username}}? Jeho zařízení se odhlásí.')"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small danger">Smazat</button></form>
+    {{end}}</td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+<form method="post" action="/users" class="card">
+  <input type="hidden" name="_csrf" value="{{.CSRF}}">
+  <h2>Nový uživatel</h2>
+  <div class="grid2">
+    <label>Uživatelské jméno <input name="username" required pattern="[A-Za-z0-9._@\-]{2,64}" autocomplete="off"></label>
+    <label>Heslo (min. 8 znaků) <input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+  </div>
+  <label class="check"><input type="checkbox" name="admin" value="1"> Administrátor (spravuje server, vidí všechny vaulty)</label>
+  <button class="primary">Vytvořit uživatele</button>
+</form>
+{{end}}

@@ -1,0 +1,9 @@
+# Go
+/server/data/
+/server/obsisync
+# Plugin
+node_modules/
+/plugin/main.js
+/plugin/dist/
+*.log
+.DS_Store

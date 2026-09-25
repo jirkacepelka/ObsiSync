@@ -1,0 +1,44 @@
+{{define "content"}}
+{{template "vaultnav" .}}
+{{$v := .Vault}}
+<div class="card row">
+  <div>
+    <b>Plán záloh:</b> {{intervalLabel $v.Backup.IntervalSec}} · držet {{retentionLabel $v.Backup.RetentionDays}}{{if $v.Backup.Zip}} · i jako ZIP{{end}}<br>
+    <span class="muted">Poslední kontrola: {{datep $v.LastBackupAt}}{{with index .D "Next"}} · další nejdříve {{date .}}{{end}}</span>
+    {{if $v.LastBackupError}}<div class="flash err">Poslední záloha selhala: {{$v.LastBackupError}}</div>{{end}}
+  </div>
+  <div class="actions">
+    {{if atLeast .Role "owner"}}<a class="button" href="/vaults/{{$v.ID}}/settings">Změnit plán</a>{{end}}
+    {{if atLeast .Role "editor"}}
+    <form method="post" action="/vaults/{{$v.ID}}/backups"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="primary">Zálohovat teď</button></form>
+    {{end}}
+  </div>
+</div>
+<table>
+  <thead><tr><th>Vytvořeno</th><th>Typ</th><th>Revize</th><th>Soubory</th><th>Velikost</th><th></th></tr></thead>
+  <tbody>
+  {{range index .D "Backups"}}
+  <tr>
+    <td><a href="/vaults/{{$v.ID}}/backups/{{.ID}}">{{date .CreatedAt}}</a></td>
+    <td>{{kindLabel .Kind}}{{if .ZipPath}} <span class="badge">ZIP</span>{{end}}</td>
+    <td>{{.Rev}}</td>
+    <td>{{.FileCount}}</td>
+    <td>{{bytes .SizeBytes}}</td>
+    <td class="actions">
+      <a class="button small" href="/vaults/{{$v.ID}}/backups/{{.ID}}/zip">ZIP</a>
+      {{if atLeast $.Role "owner"}}
+      <form method="post" action="/vaults/{{$v.ID}}/backups/{{.ID}}/restore" onsubmit="return confirm('Obnovit celý vault do stavu z této zálohy? Soubory přidané později budou smazány (aktuální stav se nejdřív uloží jako záloha).')">
+        <input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small">Obnovit vault</button>
+      </form>
+      <form method="post" action="/vaults/{{$v.ID}}/backups/{{.ID}}/delete" onsubmit="return confirm('Smazat tuto zálohu?')">
+        <input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small danger">Smazat</button>
+      </form>
+      {{end}}
+    </td>
+  </tr>
+  {{else}}
+  <tr><td colspan="6" class="muted">Zatím žádné zálohy.</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
