@@ -1,7 +1,8 @@
 name: Release
 
-# Push a tag like v0.1.0 to publish the Docker image and the plugin release.
-# Pushes to main publish the image tagged "main".
+# Every push to main publishes the Docker image (tags "latest" and the plugin
+# version) and a GitHub release v<version> with the plugin files.
+# Bump the version in manifest.json and plugin/manifest.json to release anew.
 on:
   push:
     tags: ["v*"]
@@ -16,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - id: version
+        run: echo "version=$(jq -r .version manifest.json)" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -28,8 +31,8 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/obsisync
           tags: |
             type=semver,pattern={{version}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ github.ref == 'refs/heads/main' }}
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -37,15 +40,16 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: VERSION=${{ github.ref_name }}
+          build-args: VERSION=${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   plugin:
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - id: version
+        run: echo "version=$(jq -r .version manifest.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -58,6 +62,10 @@ jobs:
       - name: GitHub release (assets used by BRAT and manual install)
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: ObsiSync ${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
           files: |
             plugin/dist/main.js
             plugin/dist/manifest.json

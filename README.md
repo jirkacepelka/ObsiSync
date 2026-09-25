@@ -167,7 +167,7 @@ cd server && go test ./... && go run ./cmd/obsisync    # http://localhost:8080, 
 cd plugin && npm ci && npm test && npm run build       # výstup v plugin/dist
 ```
 
-Vydání: tag `v0.1.0` → GitHub Actions sestaví Docker image `ghcr.io/jirkacepelka/obsisync` a GitHub Release s pluginem.
+Vydání: každý push do `main` → GitHub Actions sestaví Docker image `ghcr.io/jirkacepelka/obsisync` a GitHub Release s pluginem.
 Po prvním vydání nastav v GitHubu balíček `obsisync` (Packages) jako **Public**, aby ho ZimaOS/VPS stáhly bez přihlášení.
 
 ### Proměnné prostředí (volitelné)
