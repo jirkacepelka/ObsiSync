@@ -11,20 +11,20 @@ export const en = {
 	"status.offline": "Server unreachable, will retry",
 	"status.error": "Error: {msg}",
 	"status.massDelete": "Paused: {count} deleted files",
-	"status.clickToSetUp": "ObsiSync is not set up yet. Open Settings → ObsiSync.",
+	"status.clickToSetUp": "Simple Sync is not set up yet. Open Settings → Simple Sync.",
 
 	"cmd.syncNow": "Sync now",
 
-	"notice.conflict": "ObsiSync: conflict in “{path}”.\nYour version was saved as “{copy}”.",
-	"notice.expired": "ObsiSync: the login expired or this device was logged out. Log in again in settings.",
-	"notice.replaced": "ObsiSync: this vault now matches the server. {count} local files were moved to the Obsidian trash (.trash).",
+	"notice.conflict": "Simple Sync: conflict in “{path}”.\nYour version was saved as “{copy}”.",
+	"notice.expired": "Simple Sync: the login expired or this device was logged out. Log in again in settings.",
+	"notice.replaced": "Simple Sync: this vault now matches the server. {count} local files were moved to the Obsidian trash (.trash).",
 
-	"massDelete.title": "ObsiSync: delete files on the server?",
+	"massDelete.title": "Simple Sync: delete files on the server?",
 	"massDelete.body": "{count} files that are on the server are missing on this device. If you deleted them on purpose, delete them on the server too. If not, download them again.",
 	"massDelete.redownload": "Download them again",
 	"massDelete.delete": "Delete on the server too",
 
-	"login.intro": "Enter the address of your ObsiSync server and your login.",
+	"login.intro": "Enter the address of your Simple Sync server and your login.",
 	"login.server": "Server address",
 	"login.serverDesc": "For example https://sync.example.com or 192.168.1.10:8080",
 	"login.name": "Name",

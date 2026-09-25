@@ -116,7 +116,7 @@ func (w *Web) Register(mux *http.ServeMux) error {
 	mux.HandleFunc("GET /settings", w.admin(w.settings))
 	mux.HandleFunc("POST /settings", w.admin(w.settingsSave))
 	mux.HandleFunc("GET /plugin", w.user(w.plugin))
-	mux.HandleFunc("GET /plugin/obsisync.zip", w.pluginZip)
+	mux.HandleFunc("GET /plugin/simple-sync.zip", w.pluginZip)
 	return nil
 }
 

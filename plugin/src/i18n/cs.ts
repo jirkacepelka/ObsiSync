@@ -12,20 +12,20 @@ export const cs: Dict = {
 	"status.offline": "Server nedostupný, zkusím později",
 	"status.error": "Chyba: {msg}",
 	"status.massDelete": "Pozastaveno: {count} smazaných souborů",
-	"status.clickToSetUp": "ObsiSync ještě není nastavený. Otevři Nastavení → ObsiSync.",
+	"status.clickToSetUp": "Simple Sync ještě není nastavený. Otevři Nastavení → Simple Sync.",
 
 	"cmd.syncNow": "Synchronizovat nyní",
 
-	"notice.conflict": "ObsiSync: konflikt v „{path}“.\nTvoje verze je uložena jako „{copy}“.",
-	"notice.expired": "ObsiSync: přihlášení vypršelo nebo bylo zařízení odhlášeno. Přihlas se znovu v nastavení.",
-	"notice.replaced": "ObsiSync: vault teď odpovídá serveru. {count} lokálních souborů bylo přesunuto do koše Obsidianu (.trash).",
+	"notice.conflict": "Simple Sync: konflikt v „{path}“.\nTvoje verze je uložena jako „{copy}“.",
+	"notice.expired": "Simple Sync: přihlášení vypršelo nebo bylo zařízení odhlášeno. Přihlas se znovu v nastavení.",
+	"notice.replaced": "Simple Sync: vault teď odpovídá serveru. {count} lokálních souborů bylo přesunuto do koše Obsidianu (.trash).",
 
-	"massDelete.title": "ObsiSync: smazat soubory na serveru?",
+	"massDelete.title": "Simple Sync: smazat soubory na serveru?",
 	"massDelete.body": "V tomto zařízení chybí {count} souborů, které jsou na serveru. Pokud jsi je smazal(a) záměrně, smaž je i na serveru. Pokud ne, stáhni je zpět.",
 	"massDelete.redownload": "Stáhnout zpět ze serveru",
 	"massDelete.delete": "Smazat i na serveru",
 
-	"login.intro": "Vyplň adresu svého ObsiSync serveru a své přihlašovací údaje.",
+	"login.intro": "Vyplň adresu svého Simple Sync serveru a své přihlašovací údaje.",
 	"login.server": "Adresa serveru",
 	"login.serverDesc": "Např. https://sync.mojedomena.cz nebo 192.168.1.10:8080",
 	"login.name": "Jméno",
