@@ -10,8 +10,10 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
+	_ "time/tzdata" // lets TZ work in minimal containers
 
 	"github.com/jirkacepelka/obsisync/server/internal/app"
 	"github.com/jirkacepelka/obsisync/server/internal/auth"
@@ -34,9 +36,11 @@ Použití:
   obsisync [serve]                       spustí server
   obsisync reset-password <jméno> <heslo> nastaví heslo uživateli (i když zapomeneš admin heslo)
   obsisync backup-db <soubor>            uloží konzistentní kopii databáze
+  obsisync healthcheck                   ověří, že server běží (pro Docker)
   obsisync version
 
 Proměnné prostředí:
+  TZ                   časové pásmo pro zobrazení časů (např. Europe/Prague)
   OBSISYNC_DATA        datová složka (výchozí /data, mimo Docker ./data)
   OBSISYNC_ADDR        adresa pro naslouchání (výchozí :8080)
   OBSISYNC_BACKUP_DIR  kam ukládat ZIP zálohy (výchozí $OBSISYNC_DATA/backups)
@@ -78,12 +82,31 @@ func main() {
 		exitOn(err)
 		exitOn(st.BackupDB(context.Background(), os.Args[2]))
 		fmt.Println("Databáze uložena do", os.Args[2])
+	case "healthcheck":
+		exitOn(healthcheck(env("OBSISYNC_ADDR", ":8080")))
 	case "version":
 		fmt.Println(version)
 	default:
 		usage()
 		os.Exit(2)
 	}
+}
+
+// healthcheck is used by Docker (the image has no curl).
+func healthcheck(addr string) error {
+	if strings.HasPrefix(addr, ":") {
+		addr = "127.0.0.1" + addr
+	}
+	c := &http.Client{Timeout: 5 * time.Second}
+	res, err := c.Get("http://" + addr + "/api/v1/ping")
+	if err != nil {
+		return err
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("status %d", res.StatusCode)
+	}
+	return nil
 }
 
 func exitOn(err error) {
@@ -146,7 +169,11 @@ func serve(log *slog.Logger, dataDir string) error {
 	}()
 	log.Info("ObsiSync started", "version", version, "addr", addr, "data", dataDir)
 	if n, _ := a.Store.CountUsers(ctx); n == 0 {
-		log.Info("První spuštění: otevři webové rozhraní a vytvoř administrátorský účet", "url", "http://localhost"+addr+"/setup")
+		host := addr
+		if strings.HasPrefix(host, ":") {
+			host = "localhost" + host
+		}
+		log.Info("První spuštění: otevři webové rozhraní a vytvoř administrátorský účet", "url", "http://"+host+"/setup")
 	}
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err

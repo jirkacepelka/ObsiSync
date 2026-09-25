@@ -1,0 +1,205 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { Client } from "../src/engine/client";
+import { MassDeleteError, SyncEngine } from "../src/engine/engine";
+import { makeIgnore } from "../src/engine/ignore";
+import type { SyncState } from "../src/engine/types";
+import { MemFS } from "./memfs";
+import { fetchHttp, startServer } from "./server";
+
+let server: Awaited<ReturnType<typeof startServer>>;
+
+beforeAll(async () => {
+	server = await startServer();
+}, 120_000);
+afterAll(() => server?.stop());
+
+const ignore = makeIgnore({ configDir: ".obsidian", syncConfig: false, pluginId: "obsisync" });
+
+class Device {
+	fs = new MemFS();
+	engine!: SyncEngine;
+	conflicts: string[] = [];
+	constructor(public name: string) {}
+
+	async connect(vaultId: number) {
+		const client = new Client(server.url, "", fetchHttp);
+		await client.login("admin", "heslo1234", this.name);
+		const state: SyncState = { vaultId, lastRev: 0, base: {} };
+		this.engine = new SyncEngine({
+			fs: this.fs,
+			client,
+			state,
+			saveState: async () => {},
+			ignore,
+			deviceName: this.name,
+			onConflict: (_p, copy) => this.conflicts.push(copy),
+		});
+		return this;
+	}
+	sync() {
+		return this.engine.sync();
+	}
+}
+
+let vaultSeq = 0;
+async function newVault(): Promise<number> {
+	const c = new Client(server.url, "", fetchHttp);
+	await c.login("admin", "heslo1234", "setup");
+	return (await c.createVault(`Test ${++vaultSeq}`)).id;
+}
+
+async function pair() {
+	const id = await newVault();
+	return [await new Device("Notebook").connect(id), await new Device("iPhone").connect(id)] as const;
+}
+
+describe("sync engine against a real server", () => {
+	it("propagates creates, edits, renames and deletes", async () => {
+		const [a, b] = await pair();
+		a.fs.set("Deník/Dnes.md", "ahoj");
+		a.fs.set("obrázek.png", "\u0000binární");
+		await a.sync();
+		await b.sync();
+		expect(b.fs.snapshot()).toEqual(a.fs.snapshot());
+
+		b.fs.set("Deník/Dnes.md", "ahoj světe");
+		await b.sync();
+		await a.sync();
+		expect(a.fs.get("Deník/Dnes.md")).toBe("ahoj světe");
+
+		// Rename = delete + create; content is not uploaded again.
+		a.fs.files.set("Archiv/Dnes.md", a.fs.files.get("Deník/Dnes.md")!);
+		a.fs.del("Deník/Dnes.md");
+		await a.sync();
+		await b.sync();
+		expect(b.fs.snapshot()).toEqual({ "Archiv/Dnes.md": "ahoj světe", "obrázek.png": "\u0000binární" });
+
+		b.fs.del("obrázek.png");
+		await b.sync();
+		await a.sync();
+		expect(a.fs.get("obrázek.png")).toBeUndefined();
+	});
+
+	it("merges concurrent edits of different lines", async () => {
+		const [a, b] = await pair();
+		a.fs.set("n.md", "jedna\ndva\ntři\n");
+		await a.sync();
+		await b.sync();
+		a.fs.set("n.md", "JEDNA\ndva\ntři\n");
+		b.fs.set("n.md", "jedna\ndva\nTŘI\n");
+		await a.sync();
+		await b.sync(); // merges and pushes
+		await a.sync();
+		expect(a.fs.get("n.md")).toBe("JEDNA\ndva\nTŘI\n");
+		expect(b.fs.get("n.md")).toBe("JEDNA\ndva\nTŘI\n");
+		expect(a.conflicts.length + b.conflicts.length).toBe(0);
+	});
+
+	it("keeps both versions on a real conflict", async () => {
+		const [a, b] = await pair();
+		a.fs.set("n.md", "původní\n");
+		await a.sync();
+		await b.sync();
+		a.fs.set("n.md", "verze A\n");
+		b.fs.set("n.md", "verze B\n");
+		await a.sync();
+		const res = await b.sync();
+		expect(res.conflicts).toBe(1);
+		expect(b.fs.get("n.md")).toBe("verze A\n");
+		const copy = b.conflicts[0];
+		expect(copy).toMatch(/^n \(konflikt .* iPhone\)\.md$/);
+		expect(b.fs.get(copy)).toBe("verze B\n");
+		await a.sync();
+		expect(a.fs.snapshot()).toEqual(b.fs.snapshot());
+	});
+
+	it("edit beats delete in both directions", async () => {
+		const [a, b] = await pair();
+		a.fs.set("x.md", "x");
+		a.fs.set("y.md", "y");
+		await a.sync();
+		await b.sync();
+		// x: deleted on A, edited on B. y: edited on A, deleted on B.
+		a.fs.del("x.md");
+		a.fs.set("y.md", "y2");
+		b.fs.set("x.md", "x2");
+		b.fs.del("y.md");
+		await a.sync();
+		await b.sync();
+		await a.sync();
+		expect(a.fs.snapshot()).toEqual({ "x.md": "x2", "y.md": "y2" });
+		expect(b.fs.snapshot()).toEqual({ "x.md": "x2", "y.md": "y2" });
+	});
+
+	it("initial merge of two non-empty vaults and identical files", async () => {
+		const id = await newVault();
+		const a = await new Device("A").connect(id);
+		const b = await new Device("B").connect(id);
+		a.fs.set("same.md", "stejné");
+		b.fs.set("same.md", "stejné");
+		a.fs.set("only-a.md", "a");
+		b.fs.set("only-b.md", "b");
+		await a.sync();
+		await b.sync();
+		await a.sync();
+		expect(a.fs.snapshot()).toEqual({ "only-a.md": "a", "only-b.md": "b", "same.md": "stejné" });
+		expect(b.fs.snapshot()).toEqual(a.fs.snapshot());
+		expect(b.conflicts).toEqual([]);
+	});
+
+	it("normalizes NFD file names (macOS/iOS) to NFC", async () => {
+		const [a, b] = await pair();
+		a.fs.set("Poznámka.md".normalize("NFD"), "diakritika");
+		await a.sync();
+		await b.sync();
+		expect(b.fs.get("Poznámka.md".normalize("NFC"))).toBe("diakritika");
+		// Editing on the NFC side updates the NFD file on A, no duplicate.
+		b.fs.set("Poznámka.md", "upraveno");
+		await b.sync();
+		await a.sync();
+		expect(a.fs.snapshot()).toEqual({ ["Poznámka.md".normalize("NFD")]: "upraveno" });
+	});
+
+	it("ignores the trash, workspace and the plugin's own folder", async () => {
+		const [a, b] = await pair();
+		a.fs.set(".trash/old.md", "x");
+		a.fs.set(".obsidian/workspace.json", "{}");
+		a.fs.set(".obsidian/plugins/obsisync/data.json", "{\"token\":\"secret\"}");
+		a.fs.set("note.md", "n");
+		await a.sync();
+		await b.sync();
+		expect(b.fs.snapshot()).toEqual({ "note.md": "n" });
+	});
+
+	it("refuses to wipe the server when the local vault suddenly looks empty", async () => {
+		const [a] = await pair();
+		for (let i = 0; i < 30; i++) a.fs.set(`n${i}.md`, String(i));
+		await a.sync();
+		a.fs.files.clear();
+		await expect(a.sync()).rejects.toBeInstanceOf(MassDeleteError);
+		a.engine.allowMassDelete = true;
+		const res = await a.sync();
+		expect(res.pushed).toBe(30);
+	});
+
+	it("preferRemote overwrites local differences on first connect", async () => {
+		const [a, b] = await pair();
+		a.fs.set("n.md", "server");
+		await a.sync();
+		b.fs.set("n.md", "lokální");
+		b.engine.preferRemote = true;
+		await b.sync();
+		expect(b.fs.get("n.md")).toBe("server");
+		expect(b.conflicts).toEqual([]);
+	});
+
+	it("paginates large change feeds", async () => {
+		const [a, b] = await pair();
+		for (let i = 0; i < 1234; i++) a.fs.set(`bulk/${i}.md`, `soubor ${i}`);
+		const r = await a.sync();
+		expect(r.pushed).toBe(1234);
+		const r2 = await b.sync();
+		expect(r2.pulled).toBe(1234);
+		expect(Object.keys(b.fs.snapshot()).length).toBe(1234);
+	}, 60_000);
+});

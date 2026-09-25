@@ -1,0 +1,18 @@
+.obsisync-error {
+	color: var(--text-error);
+	margin: 0.5em 0;
+}
+.obsisync-statusline {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	margin: -0.5em 0 1em;
+}
+.obsisync-message {
+	white-space: pre-wrap;
+}
+.obsisync-status.is-error {
+	color: var(--text-error);
+}
+.obsisync-status {
+	cursor: pointer;
+}

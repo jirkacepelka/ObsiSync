@@ -1,0 +1,4 @@
+.git
+**/node_modules
+plugin/dist
+server/data

@@ -86,3 +86,10 @@ img.img { max-width: 100%; border-radius: 6px; }
 .versions li.on { background: var(--bg); }
 .versions li div { display: flex; flex-direction: column; }
 .danger-zone { border-color: var(--bad); }
+@media (max-width: 700px) {
+  header.top { gap: .4rem; padding: .5rem .8rem; }
+  header nav { order: 3; flex-basis: 100%; flex-wrap: nowrap; overflow-x: auto; }
+  header nav a { white-space: nowrap; }
+  .me { margin-left: auto; }
+  main { padding: .8rem; }
+}

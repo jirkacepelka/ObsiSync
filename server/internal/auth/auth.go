@@ -82,11 +82,11 @@ func HashToken(token string) string {
 
 // Limiter throttles failed logins per key (IP + username).
 type Limiter struct {
-	mu      sync.Mutex
-	fails   map[string][]time.Time
-	max     int
-	window  time.Duration
-	lastGC  time.Time
+	mu     sync.Mutex
+	fails  map[string][]time.Time
+	max    int
+	window time.Duration
+	lastGC time.Time
 }
 
 func NewLimiter(max int, window time.Duration) *Limiter {

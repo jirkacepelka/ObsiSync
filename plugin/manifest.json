@@ -1,0 +1,9 @@
+{
+  "id": "obsisync",
+  "name": "ObsiSync",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Simple sync with your own ObsiSync server: enter server address, name and password, pick a vault. Done.",
+  "author": "Jirka Čepelka",
+  "isDesktopOnly": false
+}

@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: plugin/package-lock.json
+
+      - name: Server – vet & test
+        working-directory: server
+        run: |
+          test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+          go vet ./...
+          go test ./...
+
+      - name: Plugin – typecheck, test (against the real server) & build
+        working-directory: plugin
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npx vitest run
+          node esbuild.config.mjs production
+
+      - name: Root manifest matches plugin manifest (needed by BRAT)
+        run: diff manifest.json plugin/manifest.json

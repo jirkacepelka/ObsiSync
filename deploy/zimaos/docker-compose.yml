@@ -1,0 +1,50 @@
+# ObsiSync pro ZimaOS / CasaOS.
+# App Store → „+“ (Custom Install / Import) → vložit tento soubor → Install.
+# Pak otevři http://<ip-zimaos>:8080 a vytvoř administrátora.
+name: obsisync
+services:
+  obsisync:
+    image: ghcr.io/jirkacepelka/obsisync:latest
+    container_name: obsisync
+    restart: unless-stopped
+    ports:
+      - target: 8080
+        published: "8080"
+        protocol: tcp
+    environment:
+      TZ: Europe/Prague
+    volumes:
+      - type: bind
+        source: /DATA/AppData/obsisync/data
+        target: /data
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_us: Time zone
+      ports:
+        - container: "8080"
+          description:
+            en_us: Web UI and sync port
+      volumes:
+        - container: /data
+          description:
+            en_us: Database, file contents and backups
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: obsisync
+  author: jirkacepelka
+  developer: jirkacepelka
+  category: Utilities
+  title:
+    en_us: ObsiSync
+  tagline:
+    en_us: Simple self-hosted sync for Obsidian
+  description:
+    en_us: Sync your Obsidian vaults through your own server. In the plugin you only enter server address, name and password.
+  icon: https://raw.githubusercontent.com/jirkacepelka/ObsiSync/main/server/internal/web/static/icon.svg
+  index: /
+  port_map: "8080"
+  scheme: http

@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
 	created_at    INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS vaults (
-	id                    INTEGER PRIMARY KEY,
+	id                    INTEGER PRIMARY KEY AUTOINCREMENT, -- ids are never reused: devices remember them
 	name                  TEXT NOT NULL UNIQUE COLLATE NOCASE,
 	head_rev              INTEGER NOT NULL DEFAULT 0,
 	backup_interval       INTEGER NOT NULL DEFAULT 86400,
