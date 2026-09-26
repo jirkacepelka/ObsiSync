@@ -12,20 +12,20 @@ export const cs: Dict = {
 	"status.offline": "Server nedostupný, zkusím později",
 	"status.error": "Chyba: {msg}",
 	"status.massDelete": "Pozastaveno: {count} smazaných souborů",
-	"status.clickToSetUp": "Simple Sync ještě není nastavený. Otevři Nastavení → Simple Sync.",
+	"status.clickToSetUp": "SimpleSync ještě není nastavený. Otevři Nastavení → SimpleSync.",
 
 	"cmd.syncNow": "Synchronizovat nyní",
 
-	"notice.conflict": "Simple Sync: konflikt v „{path}“.\nTvoje verze je uložena jako „{copy}“.",
-	"notice.expired": "Simple Sync: přihlášení vypršelo nebo bylo zařízení odhlášeno. Přihlas se znovu v nastavení.",
-	"notice.replaced": "Simple Sync: vault teď odpovídá serveru. {count} lokálních souborů bylo přesunuto do koše Obsidianu (.trash).",
+	"notice.conflict": "SimpleSync: konflikt v „{path}“.\nTvoje verze je uložena jako „{copy}“.",
+	"notice.expired": "SimpleSync: přihlášení vypršelo nebo bylo zařízení odhlášeno. Přihlas se znovu v nastavení.",
+	"notice.replaced": "SimpleSync: vault teď odpovídá serveru. {count} lokálních souborů bylo přesunuto do koše Obsidianu (.trash).",
 
-	"massDelete.title": "Simple Sync: smazat soubory na serveru?",
+	"massDelete.title": "SimpleSync: smazat soubory na serveru?",
 	"massDelete.body": "V tomto zařízení chybí {count} souborů, které jsou na serveru. Pokud jsi je smazal(a) záměrně, smaž je i na serveru. Pokud ne, stáhni je zpět.",
 	"massDelete.redownload": "Stáhnout zpět ze serveru",
 	"massDelete.delete": "Smazat i na serveru",
 
-	"login.intro": "Vyplň adresu svého Simple Sync serveru a své přihlašovací údaje.",
+	"login.intro": "Vyplň adresu svého SimpleSync serveru a své přihlašovací údaje.",
 	"login.server": "Adresa serveru",
 	"login.serverDesc": "Např. https://sync.mojedomena.cz nebo 192.168.1.10:8080",
 	"login.name": "Jméno",
@@ -64,7 +64,7 @@ export const cs: Dict = {
 	"connected.disconnectButton": "Odpojit",
 
 	"err.network": "Server je nedostupný ({msg})",
-	"err.notObsisync": "Na této adrese neběží Simple Sync server",
+	"err.notObsisync": "Na této adrese neběží SimpleSync server",
 	"err.server": "Chyba serveru ({status})",
 	"err.invalid_credentials": "Špatné jméno nebo heslo",
 	"err.rate_limited": "Příliš mnoho pokusů, zkus to za 15 minut",

@@ -1,8 +1,8 @@
 {
-  "name": "simple-sync-plugin",
-  "version": "0.3.1",
+  "name": "simplesync-plugin",
+  "version": "0.3.2",
   "private": true,
-  "description": "Simple Sync: Obsidian plugin for the self-hosted Simple Sync server",
+  "description": "SimpleSync: Obsidian plugin for the self-hosted SimpleSync server",
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit && node esbuild.config.mjs production",

@@ -11,20 +11,20 @@ export const en = {
 	"status.offline": "Server unreachable, will retry",
 	"status.error": "Error: {msg}",
 	"status.massDelete": "Paused: {count} deleted files",
-	"status.clickToSetUp": "Simple Sync is not set up yet. Open Settings → Simple Sync.",
+	"status.clickToSetUp": "SimpleSync is not set up yet. Open Settings → SimpleSync.",
 
 	"cmd.syncNow": "Sync now",
 
-	"notice.conflict": "Simple Sync: conflict in “{path}”.\nYour version was saved as “{copy}”.",
-	"notice.expired": "Simple Sync: the login expired or this device was logged out. Log in again in settings.",
-	"notice.replaced": "Simple Sync: this vault now matches the server. {count} local files were moved to the Obsidian trash (.trash).",
+	"notice.conflict": "SimpleSync: conflict in “{path}”.\nYour version was saved as “{copy}”.",
+	"notice.expired": "SimpleSync: the login expired or this device was logged out. Log in again in settings.",
+	"notice.replaced": "SimpleSync: this vault now matches the server. {count} local files were moved to the Obsidian trash (.trash).",
 
-	"massDelete.title": "Simple Sync: delete files on the server?",
+	"massDelete.title": "SimpleSync: delete files on the server?",
 	"massDelete.body": "{count} files that are on the server are missing on this device. If you deleted them on purpose, delete them on the server too. If not, download them again.",
 	"massDelete.redownload": "Download them again",
 	"massDelete.delete": "Delete on the server too",
 
-	"login.intro": "Enter the address of your Simple Sync server and your login.",
+	"login.intro": "Enter the address of your SimpleSync server and your login.",
 	"login.server": "Server address",
 	"login.serverDesc": "For example https://sync.example.com or 192.168.1.10:8080",
 	"login.name": "Name",
@@ -63,7 +63,7 @@ export const en = {
 	"connected.disconnectButton": "Disconnect",
 
 	"err.network": "Server unreachable ({msg})",
-	"err.notObsisync": "No Simple Sync server is running at this address",
+	"err.notObsisync": "No SimpleSync server is running at this address",
 	"err.server": "Server error ({status})",
 	"err.invalid_credentials": "Wrong name or password",
 	"err.rate_limited": "Too many attempts, try again in 15 minutes",

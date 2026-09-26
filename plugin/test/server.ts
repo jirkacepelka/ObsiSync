@@ -18,7 +18,7 @@ function freePort(): Promise<number> {
 	});
 }
 
-/** Builds and starts a real Simple Sync server with an admin "admin"/"heslo1234". */
+/** Builds and starts a real SimpleSync server with an admin "admin"/"heslo1234". */
 export async function startServer(): Promise<{ url: string; data: string; bin: string; stop: () => void }> {
 	const bin = join(tmpdir(), "obsisync-test-bin");
 	execFileSync("go", ["build", "-o", bin, "./cmd/obsisync"], { cwd: serverDir, stdio: "inherit" });

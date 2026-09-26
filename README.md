@@ -1,4 +1,4 @@
-# Simple Sync
+# SimpleSync
 
 Simple self-hosted sync for [Obsidian](https://obsidian.md): a small server plus an Obsidian plugin. No CouchDB, no S3 keys, no config files to tune.
 
@@ -42,10 +42,10 @@ In Obsidian you enter **server address, name and password**, pick a vault from t
      main: obsisync
      category: Utilities
      title:
-       en_us: Simple Sync
+       en_us: SimpleSync
      tagline:
        en_us: Simple self-hosted sync for Obsidian
-     icon: https://raw.githubusercontent.com/jirkacepelka/ObsiSync/main/server/internal/web/static/icon.svg
+     icon: https://raw.githubusercontent.com/jirkacepelka/SimpleSync/main/server/internal/web/static/icon.svg
      index: /
      port_map: "8080"
      scheme: http
@@ -66,7 +66,7 @@ A 1 GB RAM VPS with Docker is enough.
 # 1) DNS: an A record  sync.example.com → the VPS IP address
 # 2) on the VPS:
 mkdir obsisync && cd obsisync
-curl -O https://raw.githubusercontent.com/jirkacepelka/ObsiSync/main/deploy/docker-compose.caddy.yml
+curl -O https://raw.githubusercontent.com/jirkacepelka/SimpleSync/main/deploy/docker-compose.caddy.yml
 DOMAIN=sync.example.com docker compose -f docker-compose.caddy.yml up -d
 ```
 
@@ -87,7 +87,7 @@ Pull the new image and recreate the container (on ZimaOS: the app's settings →
 
 ## Connecting Obsidian
 
-1. **Install the plugin.** In the web admin click **Plugin → Download plugin (ZIP)**, unzip it into `<vault>/.obsidian/plugins/` (a `simple-sync` folder appears) and enable *Settings → Community plugins → Simple Sync*. On a phone, the easiest way is the **BRAT** plugin with the repository `jirkacepelka/ObsiSync`.
+1. **Install the plugin.** In the web admin click **Plugin → Download plugin (ZIP)**, unzip it into `<vault>/.obsidian/plugins/` (a `simplesync` folder appears) and enable *Settings → Community plugins → SimpleSync*. On a phone, the easiest way is the **BRAT** plugin with the repository `jirkacepelka/SimpleSync`.
 2. In the plugin settings enter the **server address, name and password**, then click **Log in**.
 3. Pick a vault from the list and click **Connect**. Or use **Create a new vault from this one**, which uploads the current vault to the server.
 
@@ -154,7 +154,7 @@ docker exec obsisync obsisync reset-password admin NewPassword123
 
 ## Network use and privacy
 
-The Simple Sync plugin communicates **only with the Simple Sync server whose address you enter**, a server you run yourself. It sends your login once to obtain a device token (the password is not stored), then uploads and downloads the files of the connected vault. There is no telemetry, no third-party service and no account with anyone else. Content is protected in transit by HTTPS when the server is reachable over HTTPS; it is not end-to-end encrypted, so whoever runs the server can read the notes stored on it.
+The SimpleSync plugin communicates **only with the SimpleSync server whose address you enter**, a server you run yourself. It sends your login once to obtain a device token (the password is not stored), then uploads and downloads the files of the connected vault. There is no telemetry, no third-party service and no account with anyone else. Content is protected in transit by HTTPS when the server is reachable over HTTPS; it is not end-to-end encrypted, so whoever runs the server can read the notes stored on it.
 
 ---
 
@@ -163,7 +163,7 @@ The Simple Sync plugin communicates **only with the Simple Sync server whose add
 ```
 Obsidian (desktop / mobile)                 Server (1 Docker container)
 ┌───────────────────────┐   HTTPS (REST)    ┌────────────────────────────────┐
-│ Simple Sync plugin    │◄────────────────►│ Simple Sync server (Go)        │
+│ SimpleSync plugin    │◄────────────────►│ SimpleSync server (Go)        │
 │  • 3 fields + picker  │   WebSocket       │  • /api/v1  sync               │
 │  • sync engine        │◄──────────────────│  • /        web admin          │
 │  • 3-way merge        │  ("new revision") │  • SQLite   metadata, history  │

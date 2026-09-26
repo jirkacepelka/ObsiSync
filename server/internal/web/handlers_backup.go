@@ -186,14 +186,14 @@ func (w *Web) pluginZip(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rw.Header().Set("Content-Type", "application/zip")
-	rw.Header().Set("Content-Disposition", `attachment; filename="simple-sync.zip"`)
+	rw.Header().Set("Content-Disposition", `attachment; filename="simplesync.zip"`)
 	zw := zip.NewWriter(rw)
 	for _, name := range pluginFiles {
 		f, err := os.Open(filepath.Join(w.PluginDir, name))
 		if err != nil {
 			continue
 		}
-		fw, err := zw.Create("simple-sync/" + name)
+		fw, err := zw.Create("simplesync/" + name)
 		if err == nil {
 			io.Copy(fw, f)
 		}

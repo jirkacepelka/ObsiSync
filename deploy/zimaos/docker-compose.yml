@@ -1,4 +1,4 @@
-# Simple Sync for ZimaOS / CasaOS – the setup verified on ZimaOS.
+# SimpleSync for ZimaOS / CasaOS – the setup verified on ZimaOS.
 # App Store → "+" (Install a customized app) → YAML → paste this file → Install.
 # Then open http://<zimaos-ip>:8080 and create the administrator.
 # Data (database, files, backups) is kept in /DATA/AppData/obsisync/data.
@@ -25,10 +25,10 @@ x-casaos:
   main: obsisync
   category: Utilities
   title:
-    en_us: Simple Sync
+    en_us: SimpleSync
   tagline:
     en_us: Simple self-hosted sync for Obsidian
-  icon: https://raw.githubusercontent.com/jirkacepelka/ObsiSync/main/server/internal/web/static/icon.svg
+  icon: https://raw.githubusercontent.com/jirkacepelka/SimpleSync/main/server/internal/web/static/icon.svg
   index: /
   port_map: "8080"
   scheme: http

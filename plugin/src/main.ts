@@ -140,7 +140,7 @@ export default class SimpleSyncPlugin extends Plugin {
 			saveState: (s) => this.saveState(s),
 			ignore: makeIgnore({ configDir: this.app.vault.configDir, syncConfig: this.settings.syncConfig, pluginId: this.manifest.id }),
 			deviceName: this.deviceName,
-			log: (m) => console.debug("[Simple Sync]", m),
+			log: (m) => console.debug("[SimpleSync]", m),
 			onConflict: (path, copy) => new Notice(t("notice.conflict", { path, copy }), 15000),
 		});
 	}
@@ -236,7 +236,7 @@ export default class SimpleSyncPlugin extends Plugin {
 			this.setStatus({ kind: "syncing", text: t("status.syncing") });
 			try {
 				const r = await engine.sync();
-				for (const p of r.problems) new Notice(`Simple Sync: ${p}`, 10000);
+				for (const p of r.problems) new Notice(`SimpleSync: ${p}`, 10000);
 				if (r.trashed) new Notice(t("notice.replaced", { count: r.trashed }), 15000);
 				this.setStatus({ kind: "idle", text: r.readOnly ? t("status.syncedReadOnly") : t("status.synced"), at: new Date() });
 			} catch (e) {
@@ -252,7 +252,7 @@ export default class SimpleSyncPlugin extends Plugin {
 	}
 
 	private async handleError(e: unknown) {
-		console.error("[Simple Sync]", e);
+		console.error("[SimpleSync]", e);
 		if (e instanceof MassDeleteError) {
 			this.setStatus({ kind: "error", text: t("status.massDelete", { count: e.count }) });
 			new ConfirmModal(
@@ -348,7 +348,7 @@ export default class SimpleSyncPlugin extends Plugin {
 	setStatus(s: Status) {
 		this.status = s;
 		const icon = { off: "○", idle: "✓", syncing: "⟳", error: "⚠", offline: "⚡" }[s.kind];
-		this.statusEl.setText(`${icon} Simple Sync`);
+		this.statusEl.setText(`${icon} SimpleSync`);
 		this.statusEl.setAttr("aria-label", s.text + (s.at ? ` (${s.at.toLocaleTimeString()})` : ""));
 		this.statusEl.setAttr("data-tooltip-position", "top");
 		this.statusEl.toggleClass("is-error", s.kind === "error");

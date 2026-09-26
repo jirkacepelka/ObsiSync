@@ -82,7 +82,7 @@ export class Client {
 		return res;
 	}
 
-	/** Verifies that an Simple Sync server answers at baseUrl. */
+	/** Verifies that an SimpleSync server answers at baseUrl. */
 	async ping(): Promise<void> {
 		let ok = false;
 		try {
