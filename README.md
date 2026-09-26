@@ -16,8 +16,42 @@ In Obsidian you enter **server address, name and password**, pick a vault from t
 
 ### A) ZimaOS (or CasaOS)
 
-1. Open **App Store → "+" → Custom install / Import** and paste [`deploy/zimaos/docker-compose.yml`](deploy/zimaos/docker-compose.yml).
-2. Install, then open `http://<zimaos-ip>:8080`.
+1. Open **App Store → "+" → Install a customized app**, switch to **YAML**, delete what's there (Ctrl+A, Delete) and paste this (also in [`deploy/zimaos/docker-compose.yml`](deploy/zimaos/docker-compose.yml)):
+
+   ```yaml
+   name: obsisync
+   services:
+     obsisync:
+       image: ghcr.io/jirkacepelka/obsisync:latest
+       container_name: obsisync
+       restart: unless-stopped
+       ports:
+         - target: 8080
+           published: "8080"
+           protocol: tcp
+       environment:
+         TZ: Europe/Prague
+       volumes:
+         - type: bind
+           source: /DATA/AppData/obsisync/data
+           target: /data
+   x-casaos:
+     architectures:
+       - amd64
+       - arm64
+     main: obsisync
+     category: Utilities
+     title:
+       en_us: Simple Sync
+     tagline:
+       en_us: Simple self-hosted sync for Obsidian
+     icon: https://raw.githubusercontent.com/jirkacepelka/ObsiSync/main/server/internal/web/static/icon.svg
+     index: /
+     port_map: "8080"
+     scheme: http
+   ```
+
+2. Click **Install**, then open `http://<zimaos-ip>:8080`.
 3. Create the administrator account (first-start wizard).
 
 Data lives in `/DATA/AppData/obsisync/data`.
