@@ -1,6 +1,7 @@
-# Simple Sync for ZimaOS / CasaOS.
-# App Store → "+" (Custom install / Import) → paste this file → Install.
+# Simple Sync for ZimaOS / CasaOS – the setup verified on ZimaOS.
+# App Store → "+" (Install a customized app) → YAML → paste this file → Install.
 # Then open http://<zimaos-ip>:8080 and create the administrator.
+# Data (database, files, backups) is kept in /DATA/AppData/obsisync/data.
 name: obsisync
 services:
   obsisync:
@@ -17,33 +18,16 @@ services:
       - type: bind
         source: /DATA/AppData/obsisync/data
         target: /data
-    x-casaos:
-      envs:
-        - container: TZ
-          description:
-            en_us: Time zone
-      ports:
-        - container: "8080"
-          description:
-            en_us: Web UI and sync port
-      volumes:
-        - container: /data
-          description:
-            en_us: Database, file contents and backups
 x-casaos:
   architectures:
     - amd64
     - arm64
   main: obsisync
-  author: jirkacepelka
-  developer: jirkacepelka
   category: Utilities
   title:
     en_us: Simple Sync
   tagline:
     en_us: Simple self-hosted sync for Obsidian
-  description:
-    en_us: Sync your Obsidian vaults through your own server. In the plugin you only enter server address, name and password.
   icon: https://raw.githubusercontent.com/jirkacepelka/ObsiSync/main/server/internal/web/static/icon.svg
   index: /
   port_map: "8080"
