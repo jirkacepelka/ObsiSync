@@ -120,6 +120,9 @@ func resetPassword(dataDir, username, password string) error {
 	if err := auth.ValidatePassword(password); err != nil {
 		return err
 	}
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		return err
+	}
 	st, err := store.Open(filepath.Join(dataDir, "obsisync.db"))
 	if err != nil {
 		return err
