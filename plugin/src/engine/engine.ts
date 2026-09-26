@@ -47,6 +47,16 @@ const COMMIT_BATCH = 200;
 const dec = new TextDecoder("utf-8", { fatal: true });
 const enc = new TextEncoder();
 
+/**
+ * A path from the server must stay inside the vault. The server already
+ * enforces this; checking again means even a broken or hostile server
+ * cannot make this device write elsewhere.
+ */
+export function safePath(p: string): boolean {
+	if (!p || p.length > 1024 || p.startsWith("/") || p.includes("\\") || p.includes("\0")) return false;
+	return p.split("/").every((seg) => seg !== "" && seg !== "." && seg !== "..");
+}
+
 function nfc(p: string): string {
 	return p.normalize("NFC");
 }
@@ -143,7 +153,7 @@ export class SyncEngine {
 			}
 			result.readOnly = page.role === "viewer";
 			for (const r of page.changes) {
-				if (this.o.ignore(r.path)) continue;
+				if (this.o.ignore(r.path) || !safePath(r.path)) continue;
 				if (await this.applyRemote(r, local, result)) result.pulled++;
 			}
 			since = page.more && page.changes.length ? page.changes[page.changes.length - 1].rev : page.head;

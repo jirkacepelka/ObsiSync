@@ -163,7 +163,7 @@ func serve(log *slog.Logger, dataDir string) error {
 	go a.Backup.Run(ctx)
 
 	addr := env("OBSISYNC_ADDR", ":8080")
-	srv := &http.Server{Addr: addr, Handler: a.Handler, ReadHeaderTimeout: 20 * time.Second}
+	srv := &http.Server{Addr: addr, Handler: a.Handler, ReadHeaderTimeout: 20 * time.Second, IdleTimeout: 2 * time.Minute}
 	go func() {
 		<-ctx.Done()
 		sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

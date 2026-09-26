@@ -5,7 +5,10 @@
 .obsisync-statusline {
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
-	margin: -0.5em 0 1em;
+	margin-top: 0.25em;
+}
+.obsisync-warning .setting-item-name {
+	color: var(--text-warning);
 }
 .obsisync-message {
 	white-space: pre-wrap;

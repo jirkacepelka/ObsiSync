@@ -49,6 +49,11 @@ export const en = {
 	"role.editor": "editor",
 	"role.viewer": "read only",
 
+	"replace.warningTitle": "Important: the server vault wins",
+	"replace.warning": "If the server vault you connect to already has files, this Obsidian vault becomes its copy: its content is replaced by the server's and nothing is uploaded. Files that exist only here, or differ, are moved to Obsidian's trash (.trash). To upload this vault instead, choose “{create}”.",
+	"http.title": "Unencrypted connection",
+	"http.body": "This address uses http:// outside your home network, so your password and notes would travel unencrypted and could be read along the way. Use an https:// address (see the SimpleSync README), or continue only if you trust this network.",
+	"http.continue": "Log in anyway",
 	"replace.title": "Connect to “{vault}”",
 	"replace.body": "This vault will be replaced by the content from the server. Nothing is uploaded from this device.\n\nFiles that exist only here, or differ from the server, are moved to the Obsidian trash (.trash), so nothing is lost.",
 	"replace.confirm": "Connect",

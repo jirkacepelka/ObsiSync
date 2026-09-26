@@ -34,7 +34,7 @@ type Web struct {
 	Blobs   *blobs.Store
 	Hub     *hub.Hub
 	Backup  *backup.Service
-	Limiter *auth.Limiter
+	Guard   *auth.LoginGuard
 	Version string
 	Log     *slog.Logger
 	// PluginDir holds the built Obsidian plugin (main.js, manifest.json,
@@ -257,6 +257,7 @@ func (w *Web) render(rw http.ResponseWriter, r *http.Request, name string, p *pa
 	rw.Header().Set("X-Frame-Options", "DENY")
 	rw.Header().Set("X-Content-Type-Options", "nosniff")
 	rw.Header().Set("Referrer-Policy", "same-origin")
+	rw.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
 	if err := t.Execute(rw, p); err != nil {
 		w.Log.Error("render", "page", name, "err", err)
 	}

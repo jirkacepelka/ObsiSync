@@ -95,6 +95,8 @@ The status bar icon shows the state: ✓ synced, ⟳ syncing, ⚡ server unreach
 
 ### What happens when you connect
 
+> ⚠️ **Connecting to a server vault that already has files replaces the content of this Obsidian vault.** Nothing is uploaded from this device; local files that differ are moved to Obsidian's trash (`.trash`). The plugin shows a warning in its settings and asks before connecting. **If you want to upload an existing vault, use "Create a new vault from this one" instead.**
+
 - **The server vault has content:** it always wins. This device becomes an exact copy of the server and **nothing is uploaded** from it. Local files that differ from the server, or exist only on this device, are moved to Obsidian's trash (`.trash`), so nothing is lost. An empty or brand-new Obsidian vault can never overwrite the server.
 - **The server vault is empty:** the content of this device is uploaded to it.
 - If the first sync is interrupted (network drops, app closed), the next sync continues in the same "copy the server" mode.
@@ -155,6 +157,17 @@ docker exec obsisync obsisync reset-password admin NewPassword123
 ## Network use and privacy
 
 The SimpleSync plugin communicates **only with the SimpleSync server whose address you enter**, a server you run yourself. It sends your login once to obtain a device token (the password is not stored), then uploads and downloads the files of the connected vault. To do that it lists all files in the vault and compares them with the server; nothing is sent anywhere else. There is no telemetry, no third-party service and no account with anyone else. Content is protected in transit by HTTPS when the server is reachable over HTTPS; it is not end-to-end encrypted, so whoever runs the server can read the notes stored on it.
+
+## Security
+
+- **Every check happens on the server.** The plugin only holds a random device token (never the password); the server verifies it and the user's role in the vault on every request. Tokens are stored only as SHA-256 hashes. A device can be logged out in the web admin at any time.
+- **Passwords** are hashed with Argon2id. At most a few password checks run at once, so login floods cannot exhaust memory, and unknown names take as long as wrong passwords.
+- **Login throttling** (web admin and plugin): 10 failures per IP address and name, 30 per IP address, and 30 per account from any address, all within 15 minutes. The per-account limit cannot be bypassed with many IP addresses or a forged `X-Forwarded-For`. Devices and browsers that are already logged in keep working while an account is throttled.
+- **Web admin**: session cookies are `HttpOnly` and `SameSite=Lax`, every form has a CSRF token, pages send a strict Content-Security-Policy and may not be framed, and files from vaults are only ever downloaded (never rendered as HTML/SVG).
+- **Paths** from devices are validated on the server and again in the plugin, so nothing can be written outside the vault. Files in `.obsidian` are only synced when you turn that on; only do so in vaults shared with people you trust, because synced plugins run on every device.
+- **Transport**: use HTTPS when the server is reachable from the internet (Caddy, Tailscale or a Cloudflare Tunnel). The plugin warns before sending a password over plain `http://` outside your home network.
+- **First start**: until the administrator account exists, whoever opens the web admin first can create it. Create it right after installing.
+- **Reverse proxies**: the client address is taken from `X-Forwarded-For` only when the connection comes from a local or private address, and then only the entry added by the nearest proxy.
 
 ---
 

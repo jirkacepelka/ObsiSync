@@ -50,12 +50,12 @@ func New(cfg Config) (*App, error) {
 		return nil, err
 	}
 	h := hub.New()
-	limiter := auth.NewLimiter(10, 15*time.Minute)
+	guard := auth.NewLoginGuard()
 	bk := &backup.Service{Store: st, Blobs: bl, Hub: h, Dir: cfg.BackupDir, Now: time.Now, Log: cfg.Log}
 
 	mux := http.NewServeMux()
-	(&api.API{Store: st, Blobs: bl, Hub: h, Limiter: limiter, Version: cfg.Version, Log: cfg.Log}).Register(mux)
-	w := &web.Web{Store: st, Blobs: bl, Hub: h, Backup: bk, Limiter: limiter, Version: cfg.Version, Log: cfg.Log, PluginDir: cfg.PluginDir}
+	(&api.API{Store: st, Blobs: bl, Hub: h, Guard: guard, Version: cfg.Version, Log: cfg.Log}).Register(mux)
+	w := &web.Web{Store: st, Blobs: bl, Hub: h, Backup: bk, Guard: guard, Version: cfg.Version, Log: cfg.Log, PluginDir: cfg.PluginDir}
 	if err := w.Register(mux); err != nil {
 		st.Close()
 		return nil, err

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}} · SimpleSync</title>
 <link rel="stylesheet" href="/static/style.css">
+<script src="/static/app.js" defer></script>
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
 </head>
 <body>
@@ -33,7 +34,7 @@
 <footer>
   <form method="get" action="/lang" class="lang">
     <input type="hidden" name="next" value="{{.Path}}">
-    <label>🌐 <select name="l" onchange="this.form.submit()" aria-label="{{$.T "footer.language"}}">
+    <label>🌐 <select name="l" data-autosubmit aria-label="{{$.T "footer.language"}}">
       {{range languages}}<option value="{{.Code}}" {{if eq .Code $.Lang}}selected{{end}}>{{.Name}}</option>{{end}}
     </select></label>
     <noscript><button class="small">OK</button></noscript>

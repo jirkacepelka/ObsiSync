@@ -42,6 +42,24 @@ export function normalizeServerUrl(input: string): string {
 	return s;
 }
 
+/**
+ * Hosts where a plain http:// login is acceptable: the home network, and Tailscale
+ * (100.64.0.0/10, *.ts.net), whose traffic is encrypted by WireGuard.
+ */
+export function isLocalHost(host: string): boolean {
+	host = host.toLowerCase();
+	return (
+		/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.)/.test(host) ||
+		[".local", ".lan", ".home.arpa", ".ts.net"].some((d) => host.endsWith(d))
+	);
+}
+
+/** True when a login to url would send the password unencrypted over the internet. */
+export function insecureRemote(url: string): boolean {
+	const m = /^http:\/\/([^/:]+)/i.exec(url);
+	return !!m && !isLocalHost(m[1]);
+}
+
 export class Client {
 	constructor(
 		public baseUrl: string,

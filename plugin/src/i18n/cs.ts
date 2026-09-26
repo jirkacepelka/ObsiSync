@@ -50,6 +50,11 @@ export const cs: Dict = {
 	"role.editor": "úpravy",
 	"role.viewer": "jen čtení",
 
+	"replace.warningTitle": "Důležité: vyhrává vault na serveru",
+	"replace.warning": "Pokud vault na serveru, ke kterému se připojíš, už obsahuje soubory, stane se tento vault v Obsidianu jeho kopií: jeho obsah se nahradí obsahem ze serveru a nic se nenahraje. Soubory, které jsou jen tady nebo se liší, se přesunou do koše Obsidianu (.trash). Pokud chceš naopak nahrát tento vault na server, zvol „{create}“.",
+	"http.title": "Nešifrované spojení",
+	"http.body": "Tato adresa používá http:// mimo domácí síť, takže heslo i poznámky by šly nešifrovaně a dalo by se je cestou přečíst. Použij adresu https:// (viz README SimpleSync), nebo pokračuj, jen pokud téhle síti věříš.",
+	"http.continue": "Přesto přihlásit",
 	"replace.title": "Připojit k „{vault}“",
 	"replace.body": "Obsah tohoto vaultu nahradí verze ze serveru. Z tohoto zařízení se nic nenahraje.\n\nSoubory, které jsou jen tady nebo se liší od serveru, se přesunou do koše Obsidianu (.trash), takže se nic neztratí.",
 	"replace.confirm": "Připojit",

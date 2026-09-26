@@ -26,7 +26,7 @@ type API struct {
 	Store   *store.Store
 	Blobs   *blobs.Store
 	Hub     *hub.Hub
-	Limiter *auth.Limiter
+	Guard   *auth.LoginGuard
 	Version string
 	Log     *slog.Logger
 }
@@ -71,13 +71,17 @@ func readJSON(r *http.Request, v any) error {
 	return json.NewDecoder(io.LimitReader(r.Body, 16<<20)).Decode(v)
 }
 
-// ClientIP returns the remote address, honouring X-Forwarded-For set by a
-// reverse proxy on the same host.
+// ClientIP returns the remote address. Behind a reverse proxy on a local or
+// private address it uses the last X-Forwarded-For entry: the address the
+// proxy itself saw (earlier entries are whatever the client sent).
 func ClientIP(r *http.Request) string {
 	host, _, _ := net.SplitHostPort(r.RemoteAddr)
 	if ip := net.ParseIP(host); ip != nil && (ip.IsLoopback() || ip.IsPrivate()) {
-		if f := r.Header.Get("X-Forwarded-For"); f != "" {
-			return strings.TrimSpace(strings.Split(f, ",")[0])
+		if f := r.Header.Values("X-Forwarded-For"); len(f) > 0 {
+			parts := strings.Split(f[len(f)-1], ",")
+			if last := net.ParseIP(strings.TrimSpace(parts[len(parts)-1])); last != nil {
+				return last.String()
+			}
 		}
 	}
 	return host
@@ -149,18 +153,21 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "Invalid request")
 		return
 	}
-	key := ClientIP(r) + "|" + strings.ToLower(req.Username)
-	if !a.Limiter.Allowed(key) {
+	ip := ClientIP(r)
+	if !a.Guard.Allowed(ip, req.Username) {
 		writeErr(w, http.StatusTooManyRequests, "rate_limited", "Too many attempts, try again in 15 minutes")
 		return
 	}
 	u, err := a.Store.UserByName(r.Context(), req.Username)
-	if err != nil || !auth.CheckPassword(u.PasswordHash(), req.Password) {
-		a.Limiter.Fail(key)
+	hash := ""
+	if err == nil {
+		hash = u.PasswordHash()
+	}
+	if !a.Guard.Check(ip, req.Username, hash, req.Password) {
+		a.Log.Warn("failed device login", "user", req.Username, "ip", ip)
 		writeErr(w, http.StatusUnauthorized, "invalid_credentials", "Wrong name or password")
 		return
 	}
-	a.Limiter.Reset(key)
 	tok, hash := auth.NewToken("osd_")
 	if _, err := a.Store.CreateDevice(r.Context(), u.ID, req.DeviceName, hash); err != nil {
 		writeErr(w, http.StatusInternalServerError, "internal", err.Error())

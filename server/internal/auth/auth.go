@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -80,17 +81,18 @@ func HashToken(token string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Limiter throttles failed logins per key (IP + username).
+// Limiter counts failures per key within a sliding window.
 type Limiter struct {
-	mu     sync.Mutex
-	fails  map[string][]time.Time
-	max    int
-	window time.Duration
-	lastGC time.Time
+	mu      sync.Mutex
+	fails   map[string][]time.Time
+	max     int
+	window  time.Duration
+	maxKeys int
+	lastGC  time.Time
 }
 
 func NewLimiter(max int, window time.Duration) *Limiter {
-	return &Limiter{fails: map[string][]time.Time{}, max: max, window: window}
+	return &Limiter{fails: map[string][]time.Time{}, max: max, window: window, maxKeys: 100_000}
 }
 
 func (l *Limiter) prune(key string, now time.Time) []time.Time {
@@ -125,6 +127,11 @@ func (l *Limiter) Allowed(key string) bool {
 func (l *Limiter) Fail(key string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	// Bounded memory: when flooded with made-up keys, new keys are not
+	// tracked (the account-wide limit still applies to real accounts).
+	if _, ok := l.fails[key]; !ok && len(l.fails) >= l.maxKeys {
+		return
+	}
 	l.fails[key] = append(l.fails[key], time.Now())
 }
 
@@ -132,4 +139,71 @@ func (l *Limiter) Reset(key string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	delete(l.fails, key)
+}
+
+// LoginGuard protects password checks against guessing:
+//   - 10 failures per IP address and name in 15 minutes,
+//   - 30 failures per IP address in 15 minutes (trying many names),
+//   - 30 failures per existing account in 15 minutes, whatever the IP
+//     (a botnet or a spoofed X-Forwarded-For does not get around it).
+//
+// Devices and browser sessions that are already logged in keep working
+// while an account is throttled.
+//
+// It also caps how many Argon2 checks run at once (each needs ~19 MB), and
+// checks a dummy hash for unknown names so the response time does not
+// reveal which names exist.
+type LoginGuard struct {
+	pair, ip, account *Limiter
+	sem               chan struct{}
+	dummy             string
+}
+
+func NewLoginGuard() *LoginGuard {
+	const window = 15 * time.Minute
+	n := runtime.NumCPU()
+	if n > 4 {
+		n = 4
+	}
+	dummy, err := HashPassword("dummy password for unknown names")
+	if err != nil {
+		panic(err)
+	}
+	return &LoginGuard{
+		pair:    NewLimiter(10, window),
+		ip:      NewLimiter(30, window),
+		account: NewLimiter(30, window),
+		sem:     make(chan struct{}, n),
+		dummy:   dummy,
+	}
+}
+
+func accountKey(name string) string { return strings.ToLower(strings.TrimSpace(name)) }
+
+// Allowed reports whether a login attempt from ip for name may be checked.
+func (g *LoginGuard) Allowed(ip, name string) bool {
+	return g.pair.Allowed(ip+"|"+accountKey(name)) && g.ip.Allowed(ip) && g.account.Allowed(accountKey(name))
+}
+
+// Check verifies pw against encoded (empty for an unknown name) and records
+// the result.
+func (g *LoginGuard) Check(ip, name, encoded, pw string) bool {
+	known := encoded != ""
+	if !known {
+		encoded = g.dummy
+	}
+	g.sem <- struct{}{}
+	ok := CheckPassword(encoded, pw) && known
+	<-g.sem
+	pair := ip + "|" + accountKey(name)
+	if ok {
+		g.pair.Reset(pair)
+		return true
+	}
+	g.pair.Fail(pair)
+	g.ip.Fail(ip)
+	if known {
+		g.account.Fail(accountKey(name))
+	}
+	return false
 }

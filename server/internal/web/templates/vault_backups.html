@@ -27,10 +27,10 @@
     <td class="actions">
       <a class="button small" href="/vaults/{{$v.ID}}/backups/{{.ID}}/zip">ZIP</a>
       {{if atLeast $.Role "owner"}}
-      <form method="post" action="/vaults/{{$v.ID}}/backups/{{.ID}}/restore" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{$.T "backups.restoreConfirm"}}">
+      <form method="post" action="/vaults/{{$v.ID}}/backups/{{.ID}}/restore" data-confirm="{{$.T "backups.restoreConfirm"}}">
         <input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small">{{$.T "backups.restoreVault"}}</button>
       </form>
-      <form method="post" action="/vaults/{{$v.ID}}/backups/{{.ID}}/delete" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{$.T "backups.deleteConfirm"}}">
+      <form method="post" action="/vaults/{{$v.ID}}/backups/{{.ID}}/delete" data-confirm="{{$.T "backups.deleteConfirm"}}">
         <input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small danger">{{$.T "action.delete"}}</button>
       </form>
       {{end}}

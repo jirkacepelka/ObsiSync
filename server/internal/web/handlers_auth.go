@@ -69,20 +69,23 @@ func (w *Web) loginSubmit(rw http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("username")
 	next := safeNext(r.FormValue("next"))
 	p := &page{Title: w.tr(r, "title.login"), D: map[string]any{"Next": next, "Username": name}}
-	key := api.ClientIP(r) + "|" + strings.ToLower(name)
-	if !w.Limiter.Allowed(key) {
+	ip := api.ClientIP(r)
+	if !w.Guard.Allowed(ip, name) {
 		p.Err = w.tr(r, "msg.rateLimited")
 		w.render(rw, r, "login", p)
 		return
 	}
 	u, err := w.Store.UserByName(r.Context(), name)
-	if err != nil || !auth.CheckPassword(u.PasswordHash(), r.FormValue("password")) {
-		w.Limiter.Fail(key)
+	hash := ""
+	if err == nil {
+		hash = u.PasswordHash()
+	}
+	if !w.Guard.Check(ip, name, hash, r.FormValue("password")) {
+		w.Log.Warn("failed web login", "user", name, "ip", ip)
 		p.Err = w.tr(r, "msg.badLogin")
 		w.render(rw, r, "login", p)
 		return
 	}
-	w.Limiter.Reset(key)
 	if err := w.startSession(rw, r, u); err != nil {
 		p.Err = w.errText(r, err)
 		w.render(rw, r, "login", p)
@@ -105,7 +108,12 @@ func (w *Web) account(rw http.ResponseWriter, r *http.Request, p *page) {
 }
 
 func (w *Web) accountSave(rw http.ResponseWriter, r *http.Request, p *page) {
-	if !auth.CheckPassword(p.User.PasswordHash(), r.FormValue("current")) {
+	ip := api.ClientIP(r)
+	if !w.Guard.Allowed(ip, p.User.Username) {
+		redirect(rw, r, "/account", "", w.tr(r, "msg.rateLimited"))
+		return
+	}
+	if !w.Guard.Check(ip, p.User.Username, p.User.PasswordHash(), r.FormValue("current")) {
 		redirect(rw, r, "/account", "", w.tr(r, "msg.currentPasswordWrong"))
 		return
 	}

@@ -1,5 +1,5 @@
 import { App, ButtonComponent, DropdownComponent, Modal, PluginSettingTab, requireApiVersion, Setting, type SettingDefinitionItem } from "obsidian";
-import { normalizeServerUrl, type VaultInfo } from "./engine/client";
+import { insecureRemote, normalizeServerUrl, type VaultInfo } from "./engine/client";
 import { LANGUAGES, t } from "./i18n";
 import type SimpleSyncPlugin from "./main";
 
@@ -155,6 +155,14 @@ export class SimpleSyncSettingTab extends PluginSettingTab {
 		const picking = () => !!s.token && s.vaultId === null;
 		const connected = () => !!s.token && s.vaultId !== null;
 		return [
+			{
+				name: t("replace.warningTitle"),
+				desc: t("replace.warning", { create: t("vaults.createButton") }),
+				visible: () => !connected(),
+				build: (row) => {
+					row.settingEl.addClass("obsisync-warning");
+				},
+			},
 			...this.loginRows(loggedOut),
 			...this.pickerRows(picking),
 			...this.connectedRows(connected),
@@ -190,7 +198,7 @@ export class SimpleSyncSettingTab extends PluginSettingTab {
 	// ---- step 1: server, name, password ----
 
 	private loginRows(visible: () => boolean): Row[] {
-		const submit = () =>
+		const login = () =>
 			this.run(async () => {
 				const server = normalizeServerUrl(this.form.url);
 				const user = this.form.user.trim();
@@ -199,6 +207,14 @@ export class SimpleSyncSettingTab extends PluginSettingTab {
 				this.form.pass = "";
 				this.vaults = null;
 			});
+		// Warn before a password would cross the internet unencrypted.
+		const submit = () => {
+			if (!insecureRemote(normalizeServerUrl(this.form.url))) return login();
+			new ConfirmModal(this.app, t("http.title"), t("http.body"), [
+				{ label: t("replace.cancel"), cta: true, action: () => {} },
+				{ label: t("http.continue"), warning: true, action: () => void login() },
+			]).open();
+		};
 		return [
 			{
 				name: t("login.server"),

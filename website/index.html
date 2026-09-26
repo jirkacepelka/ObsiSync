@@ -155,6 +155,7 @@
           <div class="pick">○ Work <em>editor</em></div>
           <div class="pick">○ Family recipes <em>read only</em></div>
         </div>
+        <p class="step-warn">⚠️ If the server vault already has notes, <b>this device's vault is replaced</b> by the server's copy (local leftovers go to Obsidian's trash). To upload an existing vault, choose <i>Create a new vault from this one</i> instead.</p>
       </article>
     </div>
   </div>
@@ -322,6 +323,7 @@ DOMAIN=sync.example.com docker compose -f docker-compose.caddy.yml up -d</code><
     <div>
       <h2>Your notes never leave your server</h2>
       <p>The plugin talks only to the server address you enter – a server you run yourself. No telemetry, no third-party service, no account with anyone else. Your password is used once to get a device token and is never stored on the device. Use HTTPS (Caddy or Tailscale) to encrypt traffic in transit.</p>
+      <p>Login guessing is throttled per address and per account, passwords are hashed with Argon2id, and every request is authorized by the server – the plugin never decides who gets in.</p>
     </div>
   </div>
 </section>
@@ -332,7 +334,7 @@ DOMAIN=sync.example.com docker compose -f docker-compose.caddy.yml up -d</code><
     <div class="section-head"><span class="eyebrow">FAQ</span><h2>Questions</h2></div>
     <details><summary>Is it free?</summary><p>Yes. SimpleSync is open source under the MIT license. You only pay for the machine it runs on – often a box you already own.</p></details>
     <details><summary>Does it replace Obsidian Sync?</summary><p>It covers the same job – keeping vaults in sync between devices – but runs on your own server. Obsidian Sync is a great paid service; SimpleSync is for people who want to self-host.</p></details>
-    <details><summary>What happens when I connect a new device?</summary><p>If the vault on the server has content, the server always wins: the device becomes an exact copy and nothing is uploaded from it. Anything that was only on the device is moved to Obsidian's trash, so nothing is lost.</p></details>
+    <details><summary>What happens when I connect a new device?</summary><p>If the vault on the server has content, the server always wins: the device becomes an exact copy and nothing is uploaded from it. Anything that was only on the device is moved to Obsidian's trash, so nothing is lost. The plugin warns you before this happens. If you want to upload an existing vault, use “Create a new vault from this one”.</p></details>
     <details><summary>Can I use it outside my home network?</summary><p>Yes. On a VPS you get HTTPS automatically. At home, the easiest way is Tailscale or a Cloudflare Tunnel.</p></details>
     <details><summary>Is it end-to-end encrypted?</summary><p>No – the server can read the notes, which is what makes version previews and server-side backups possible. Since you run the server, that's you.</p></details>
     <details><summary>How do I back up the server?</summary><p>Everything lives in one data folder. Copy it, or use the built-in scheduled backups with optional ZIP files.</p></details>

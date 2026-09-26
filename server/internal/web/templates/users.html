@@ -18,7 +18,7 @@
       </form>
     </td>
     <td>{{if ne .ID $.User.ID}}
-      <form method="post" action="/users/{{.ID}}/delete" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{$.T "users.deleteConfirm" .Username}}"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small danger">{{$.T "action.delete"}}</button></form>
+      <form method="post" action="/users/{{.ID}}/delete" data-confirm="{{$.T "users.deleteConfirm" .Username}}"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small danger">{{$.T "action.delete"}}</button></form>
     {{end}}</td>
   </tr>
   {{end}}

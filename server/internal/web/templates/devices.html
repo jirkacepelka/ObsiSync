@@ -12,7 +12,7 @@
     <td>{{if index $online .ID}}<span class="badge good">online</span>{{else}}<span class="muted">offline</span>{{end}}</td>
     <td>{{$.Ago .LastSeen}}</td>
     <td>{{$.Date .CreatedAt}}</td>
-    <td><form method="post" action="/devices/{{.ID}}/delete" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{$.T "devices.logoutConfirm" .Name}}"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small danger">{{$.T "nav.logout"}}</button></form></td>
+    <td><form method="post" action="/devices/{{.ID}}/delete" data-confirm="{{$.T "devices.logoutConfirm" .Name}}"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="small danger">{{$.T "nav.logout"}}</button></form></td>
   </tr>
   {{else}}
   <tr><td colspan="6" class="muted">{{$.T "devices.none"}} <a href="/plugin">{{$.T "devices.howTo"}}</a></td></tr>

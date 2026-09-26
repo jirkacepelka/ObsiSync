@@ -2,6 +2,17 @@
 
 Each `## <version>` section below becomes the description of that GitHub release.
 
+## 0.3.4
+
+Security hardening after a review:
+
+- Login throttling can no longer be bypassed: besides the per-address limit there is a per-account limit (30 failed attempts in 15 minutes from any address), and a forged `X-Forwarded-For` header is ignored.
+- Unknown names and wrong passwords take the same time; at most a few password checks run at once.
+- Failed logins are logged with the name and address.
+- The web admin sends a strict Content-Security-Policy (no inline scripts).
+- The plugin rejects server paths that would leave the vault, and warns before logging in over plain http:// outside the home network.
+- The plugin settings explain up front that connecting to a server vault with files replaces this vault's content (nothing is lost: local files go to Obsidian's trash).
+
 ## 0.3.3
 
 - Plugin settings use Obsidian's declarative settings API (Obsidian 1.13+), so they show up in the settings search. Older Obsidian versions keep the same settings page.
