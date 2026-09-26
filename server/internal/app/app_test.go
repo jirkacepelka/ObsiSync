@@ -1,6 +1,7 @@
 package app
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -13,6 +14,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -34,7 +36,12 @@ type env struct {
 
 func newEnv(t *testing.T) *env {
 	t.Helper()
-	a, err := New(Config{DataDir: t.TempDir(), Version: "test", Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	return newEnvPlugin(t, "")
+}
+
+func newEnvPlugin(t *testing.T, pluginDir string) *env {
+	t.Helper()
+	a, err := New(Config{DataDir: t.TempDir(), PluginDir: pluginDir, Version: "test", Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -459,4 +466,105 @@ func TestWebGUI(t *testing.T) {
 func mustGet(b *browser, p string) string {
 	_, body := b.get(p)
 	return body
+}
+
+func TestObsidianVaultDownload(t *testing.T) {
+	pd := t.TempDir()
+	for _, f := range []string{"main.js", "manifest.json", "styles.css"} {
+		os.WriteFile(filepath.Join(pd, f), []byte("plugin "+f), 0o644)
+	}
+	e := newEnvPlugin(t, pd)
+	ctx := context.Background()
+	e.user("admin", true)
+	jirka := e.user("jirka", false)
+	e.user("petra", false)
+	v, _ := e.app.Store.CreateVault(ctx, "Moje: poznámky", store.DefaultBackupPolicy, jirka.ID)
+	tj := e.login("jirka")
+	e.put(tj, v.ID, "Deník/Dnes.md", []byte("# Ahoj"), "")
+	e.put(tj, v.ID, ".obsidian/community-plugins.json", []byte(`["dataview","simplesync"]`), "")
+	e.put(tj, v.ID, ".obsidian/plugins/simplesync/data.json", []byte(`{"token":"osd_secret"}`), "")
+
+	web := func(name string) *browser {
+		jar, _ := cookiejar.New(nil)
+		b := &browser{e: e, c: &http.Client{Jar: jar}}
+		b.get("/login")
+		if _, body := b.post("/login", url.Values{"username": {name}, "password": {"heslo1234"}}); strings.Contains(body, "flash err") {
+			t.Fatalf("web login %s failed", name)
+		}
+		return b
+	}
+	unzip := func(body string) map[string]string {
+		zr, err := zip.NewReader(strings.NewReader(body), int64(len(body)))
+		if err != nil {
+			t.Fatalf("not a zip: %v", err)
+		}
+		out := map[string]string{}
+		for _, f := range zr.File {
+			r, _ := f.Open()
+			b, _ := io.ReadAll(r)
+			r.Close()
+			out[f.Name] = string(b)
+		}
+		return out
+	}
+
+	bj := web("jirka")
+	if !strings.Contains(mustGet(bj, "/vaults/"+itoa(v.ID)), "/obsidian.zip") {
+		t.Fatal("no download button on the vault page")
+	}
+	st, body := bj.get("/vaults/" + itoa(v.ID) + "/obsidian.zip")
+	if st != 200 {
+		t.Fatalf("download: %d", st)
+	}
+	files := unzip(body)
+	dir := "Moje_ poznámky/"
+	if files[dir+"Deník/Dnes.md"] != "# Ahoj" {
+		t.Fatalf("notes missing: %v", keys(files))
+	}
+	for _, f := range []string{"main.js", "manifest.json", "styles.css"} {
+		if files[dir+".obsidian/plugins/simplesync/"+f] != "plugin "+f {
+			t.Errorf("plugin file %s missing", f)
+		}
+	}
+	if got := files[dir+".obsidian/community-plugins.json"]; got != `["simplesync","dataview"]` {
+		t.Errorf("community-plugins.json = %s", got)
+	}
+	data := files[dir+".obsidian/plugins/simplesync/data.json"]
+	var preset struct {
+		ServerURL        string
+		Username         string
+		LoginPrompt      bool
+		PendingVaultID   int64
+		PendingVaultName string
+	}
+	json.Unmarshal([]byte(data), &preset)
+	if preset.ServerURL != e.srv.URL || preset.Username != "jirka" || !preset.LoginPrompt || preset.PendingVaultID != v.ID || preset.PendingVaultName != v.Name {
+		t.Errorf("preset: %+v", preset)
+	}
+	if strings.Contains(body, "osd_") || strings.Contains(data, "token") {
+		t.Error("the ZIP contains a token")
+	}
+
+	// Starter vault: plugin only, no vault preselected.
+	st, body = bj.get("/plugin/starter.zip")
+	files = unzip(body)
+	if st != 200 || files["SimpleSync/.obsidian/community-plugins.json"] != `["simplesync"]` || !strings.Contains(files["SimpleSync/.obsidian/plugins/simplesync/data.json"], `"pendingVaultId": null`) {
+		t.Fatalf("starter zip: %d %v", st, keys(files))
+	}
+
+	// Other users cannot download the vault; anonymous users are sent to login.
+	if st, _ := web("petra").get("/vaults/" + itoa(v.ID) + "/obsidian.zip"); st != 404 {
+		t.Errorf("non-member download: %d", st)
+	}
+	if res, _ := (&http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}).Get(e.srv.URL + "/plugin/starter.zip"); res.StatusCode != 303 {
+		t.Errorf("anonymous starter download: %d", res.StatusCode)
+	}
+}
+
+func keys(m map[string]string) []string {
+	var out []string
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
 }

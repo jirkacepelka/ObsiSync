@@ -1,20 +1,28 @@
 {{define "content"}}
 <h1>{{$.T "plugin.title"}}</h1>
+{{if index .D "Available"}}
 <div class="card">
-  <h2>{{$.T "plugin.step1"}}</h2>
-  {{if index .D "Available"}}
-  <p><a class="button primary" href="/plugin/simplesync.zip">{{$.T "plugin.download"}}</a></p>
+  <h2>{{$.T "plugin.easyTitle"}}</h2>
+  <p>{{$.T "plugin.easyDesc"}}</p>
+  <p><a class="button primary" href="/plugin/starter.zip">⬇ {{$.T "plugin.easyDownload"}}</a></p>
+  <ol>
+    <li>{{$.T "plugin.easyStep1"}}</li>
+    <li>{{$.T "plugin.easyStep2"}}</li>
+    <li>{{$.T "plugin.easyStep3"}}</li>
+    <li>{{$.T "plugin.easyStep4"}}</li>
+  </ol>
+  <p class="muted">{{$.T "plugin.easyVaults"}} <a href="/vaults">→</a></p>
+</div>
+<details class="card">
+  <summary><b>{{$.T "plugin.manualTitle"}}</b></summary>
+  <h3>{{$.T "plugin.step1"}}</h3>
+  <p><a class="button" href="/plugin/simplesync.zip">{{$.T "plugin.download"}}</a></p>
   <ol>
     <li>{{$.T "plugin.unzip"}} <code>&lt;vault&gt;/.obsidian/plugins/</code></li>
     <li>{{$.T "plugin.enable"}}</li>
   </ol>
   <p class="muted">{{$.T "plugin.brat"}} <code>jirkacepelka/SimpleSync</code></p>
-  {{else}}
-  <p>{{$.T "plugin.notBundled"}} <code>jirkacepelka/SimpleSync</code></p>
-  {{end}}
-</div>
-<div class="card">
-  <h2>{{$.T "plugin.step2"}}</h2>
+  <h3>{{$.T "plugin.step2"}}</h3>
   <p>{{$.T "plugin.fillIn"}}</p>
   <table class="kv">
     <tr><th>{{$.T "plugin.serverAddress"}}</th><td><code>{{index .D "ServerURL"}}</code></td></tr>
@@ -22,5 +30,10 @@
     <tr><th>{{$.T "field.password"}}</th><td>{{$.T "plugin.yourPassword"}}</td></tr>
   </table>
   <p>{{$.T "plugin.finish"}}</p>
+</details>
+{{else}}
+<div class="card">
+  <p>{{$.T "plugin.notBundled"}} <code>jirkacepelka/SimpleSync</code></p>
 </div>
+{{end}}
 {{end}}

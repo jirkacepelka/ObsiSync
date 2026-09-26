@@ -58,6 +58,7 @@ type page struct {
 	Tab     string
 	Lang    string
 	Path    string // current URL, for the language switcher
+	Bundle  bool   // the plugin is available, so vaults can be downloaded for Obsidian
 	D       map[string]any
 }
 
@@ -86,6 +87,7 @@ func (w *Web) Register(mux *http.ServeMux) error {
 	mux.HandleFunc("POST /vaults/{id}/version/{vid}/restore", w.vault(store.RoleEditor, w.versionRestore))
 	mux.HandleFunc("GET /vaults/{id}/trash", w.vault(store.RoleViewer, w.trash))
 	mux.HandleFunc("GET /vaults/{id}/zip", w.vault(store.RoleViewer, w.vaultZip))
+	mux.HandleFunc("GET /vaults/{id}/obsidian.zip", w.vault(store.RoleViewer, w.obsidianVaultZip))
 
 	mux.HandleFunc("GET /vaults/{id}/backups", w.vault(store.RoleViewer, w.backups))
 	mux.HandleFunc("POST /vaults/{id}/backups", w.vault(store.RoleEditor, w.backupCreate))
@@ -117,6 +119,7 @@ func (w *Web) Register(mux *http.ServeMux) error {
 	mux.HandleFunc("POST /settings", w.admin(w.settingsSave))
 	mux.HandleFunc("GET /plugin", w.user(w.plugin))
 	mux.HandleFunc("GET /plugin/simplesync.zip", w.pluginZip)
+	mux.HandleFunc("GET /plugin/starter.zip", w.user(w.obsidianStarterZip))
 	return nil
 }
 
@@ -242,6 +245,7 @@ func (w *Web) render(rw http.ResponseWriter, r *http.Request, name string, p *pa
 		return
 	}
 	p.Version = w.Version
+	p.Bundle = w.pluginAvailable()
 	p.Lang = i18n.FromRequest(r)
 	p.Path = r.URL.RequestURI()
 	if p.OK == "" {

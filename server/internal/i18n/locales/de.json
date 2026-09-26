@@ -213,5 +213,16 @@
   "msg.csrf": "Ungültiges Formular (CSRF). Lade die Seite neu und versuche es erneut.",
   "msg.adminOnly": "Diese Seite ist nur für Administratoren.",
   "msg.vaultNotFound": "Der Vault existiert nicht oder du hast keinen Zugriff.",
-  "msg.forbidden": "Für diese Aktion hast du keine Berechtigung."
+  "msg.forbidden": "Für diese Aktion hast du keine Berechtigung.",
+  "obsidian.download": "Für Obsidian herunterladen",
+  "obsidian.downloadHint": "Ein ZIP mit den Notizen dieses Vaults und dem bereits eingerichteten SimpleSync-Plugin. Entpacken, in Obsidian „Open folder as vault“ wählen, auf „Trust author and enable plugins“ klicken und das Passwort eingeben.",
+  "plugin.easyTitle": "Der einfache Weg: ein fertiger Vault",
+  "plugin.easyDesc": "Lade einen Obsidian-Vault herunter, in dem das SimpleSync-Plugin bereits installiert und für diesen Server eingerichtet ist.",
+  "plugin.easyDownload": "Fertigen Vault herunterladen (ZIP)",
+  "plugin.easyStep1": "Entpacke die Datei, zum Beispiel in Dokumente.",
+  "plugin.easyStep2": "Wähle in Obsidian „Open folder as vault“ und den entpackten Ordner.",
+  "plugin.easyStep3": "Klicke auf „Trust author and enable plugins“.",
+  "plugin.easyStep4": "Gib im erscheinenden Fenster dein Passwort ein und wähle einen Vault. Fertig.",
+  "plugin.easyVaults": "Ein Vault lässt sich auch direkt mit seinen Notizen herunterladen: „Für Obsidian herunterladen“ in der Vault-Liste.",
+  "plugin.manualTitle": "Fortgeschritten: Plugin in einen bestehenden Vault oder auf dem Handy installieren"
 }

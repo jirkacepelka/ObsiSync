@@ -96,3 +96,10 @@ img.img { max-width: 100%; border-radius: 6px; }
 footer { display: flex; flex-direction: column; align-items: center; gap: .4rem; }
 footer .lang label { display: inline-flex; align-items: center; gap: .4rem; margin: 0; font-weight: 400; }
 footer .lang select { display: inline-block; width: auto; margin: 0; padding: .2rem .4rem; font-size: .85rem; }
+
+/* "Download for Obsidian" box on a vault's files page */
+.getvault { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.getvault .muted { flex: 1 1 280px; font-size: .9em; }
+details.card > summary { cursor: pointer; }
+details.card[open] > summary { margin-bottom: .5em; }
+.card > h2:first-child { margin-top: 0; }

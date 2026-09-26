@@ -213,5 +213,16 @@
   "msg.csrf": "Nieprawidłowy formularz (CSRF). Odśwież stronę i spróbuj ponownie.",
   "msg.adminOnly": "Ta strona jest tylko dla administratorów.",
   "msg.vaultNotFound": "Sejf nie istnieje lub nie masz do niego dostępu.",
-  "msg.forbidden": "Nie masz uprawnień do tej czynności."
+  "msg.forbidden": "Nie masz uprawnień do tej czynności.",
+  "obsidian.download": "Pobierz dla Obsidiana",
+  "obsidian.downloadHint": "ZIP z notatkami tego sejfu i już skonfigurowaną wtyczką SimpleSync. Rozpakuj go, w Obsidianie wybierz „Open folder as vault”, kliknij „Trust author and enable plugins” i wpisz hasło.",
+  "plugin.easyTitle": "Najprościej: gotowy sejf",
+  "plugin.easyDesc": "Pobierz sejf Obsidiana z wtyczką SimpleSync już zainstalowaną i skonfigurowaną dla tego serwera.",
+  "plugin.easyDownload": "Pobierz gotowy sejf (ZIP)",
+  "plugin.easyStep1": "Rozpakuj plik, na przykład do Dokumentów.",
+  "plugin.easyStep2": "W Obsidianie wybierz „Open folder as vault” i wskaż rozpakowany folder.",
+  "plugin.easyStep3": "Kliknij „Trust author and enable plugins”.",
+  "plugin.easyStep4": "Wpisz hasło w oknie, które się pojawi, i wybierz sejf. Gotowe.",
+  "plugin.easyVaults": "Sejf możesz też pobrać razem z notatkami: „Pobierz dla Obsidiana” na liście sejfów.",
+  "plugin.manualTitle": "Zaawansowane: instalacja wtyczki w istniejącym sejfie lub na telefonie"
 }

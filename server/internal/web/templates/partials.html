@@ -35,7 +35,7 @@
 {{define "vaulttable"}}
 {{with index .D "Vaults"}}
 <table>
-  <thead><tr><th>{{$.T "col.vault"}}</th><th>{{$.T "col.files"}}</th><th>{{$.T "col.size"}}</th><th>{{$.T "col.backups"}}</th><th>{{$.T "col.lastBackup"}}</th><th>{{$.T "col.yourRole"}}</th></tr></thead>
+  <thead><tr><th>{{$.T "col.vault"}}</th><th>{{$.T "col.files"}}</th><th>{{$.T "col.size"}}</th><th>{{$.T "col.backups"}}</th><th>{{$.T "col.lastBackup"}}</th><th>{{$.T "col.yourRole"}}</th>{{if $.Bundle}}<th></th>{{end}}</tr></thead>
   <tbody>
   {{range .}}
   <tr>
@@ -45,6 +45,7 @@
     <td>{{$.T "vaults.schedule" ($.Interval .Backup.IntervalSec) ($.Retention .Backup.RetentionDays)}}</td>
     <td>{{$.DateP .LastBackupAt}}{{if .LastBackupError}} <span class="badge bad">{{$.T "badge.error"}}</span>{{end}}</td>
     <td>{{$.RoleName .Role}}</td>
+    {{if $.Bundle}}<td><a class="button small" href="/vaults/{{.ID}}/obsidian.zip" title="{{$.T "obsidian.downloadHint"}}">⬇ {{$.T "obsidian.download"}}</a></td>{{end}}
   </tr>
   {{end}}
   </tbody>

@@ -5,7 +5,7 @@ import { makeIgnore } from "./engine/ignore";
 import type { Http, SyncState } from "./engine/types";
 import { setLanguage, t } from "./i18n";
 import { ObsidianFS } from "./obsidian-fs";
-import { ConfirmModal, SimpleSyncSettingTab } from "./settings";
+import { ConfirmModal, LoginModal, SimpleSyncSettingTab } from "./settings";
 
 export interface Settings {
 	serverUrl: string;
@@ -16,9 +16,27 @@ export interface Settings {
 	syncConfig: boolean;
 	/** "auto" (follow Obsidian) or a language code. */
 	language: string;
+	/**
+	 * Set in vaults downloaded from the web admin ("Download for Obsidian"):
+	 * ask for the password on start and, after logging in, connect this vault.
+	 */
+	loginPrompt: boolean;
+	pendingVaultId: number | null;
+	pendingVaultName: string;
 }
 
-const DEFAULTS: Settings = { serverUrl: "", username: "", token: "", vaultId: null, vaultName: "", syncConfig: false, language: "auto" };
+const DEFAULTS: Settings = {
+	serverUrl: "",
+	username: "",
+	token: "",
+	vaultId: null,
+	vaultName: "",
+	syncConfig: false,
+	language: "auto",
+	loginPrompt: false,
+	pendingVaultId: null,
+	pendingVaultName: "",
+};
 
 export type Status = { kind: "off" | "idle" | "syncing" | "error" | "offline"; text: string; at?: Date };
 
@@ -95,6 +113,7 @@ export default class SimpleSyncPlugin extends Plugin {
 			});
 			if (this.connected) await this.start();
 			else this.setStatus({ kind: "off", text: this.settings.token ? t("status.pickVault") : t("status.loggedOut") });
+			if (!this.settings.token && this.settings.loginPrompt && this.settings.serverUrl) new LoginModal(this.app, this).open();
 		});
 	}
 
@@ -139,7 +158,7 @@ export default class SimpleSyncPlugin extends Plugin {
 			state,
 			saveState: (s) => this.saveState(s),
 			ignore: makeIgnore({ configDir: this.app.vault.configDir, syncConfig: this.settings.syncConfig, pluginId: this.manifest.id }),
-			deviceName: this.deviceName,
+			author: this.settings.username,
 			log: (m) => console.debug("[SimpleSync]", m),
 			onConflict: (path, copy) => new Notice(t("notice.conflict", { path, copy }), 15000),
 		});
@@ -172,9 +191,17 @@ export default class SimpleSyncPlugin extends Plugin {
 		const client = new Client(serverUrl, "", obsidianHttp);
 		await client.ping();
 		const token = await client.login(username, password, this.deviceName);
-		this.settings = { ...this.settings, serverUrl, username, token, vaultId: null, vaultName: "" };
+		const pending = this.settings.pendingVaultId;
+		const pendingName = this.settings.pendingVaultName;
+		this.settings = { ...this.settings, serverUrl, username, token, vaultId: null, vaultName: "", loginPrompt: false, pendingVaultId: null, pendingVaultName: "" };
 		await this.saveSettings();
 		this.setStatus({ kind: "off", text: t("status.pickVault") });
+		if (pending === null) return;
+		// A vault downloaded for Obsidian: its files came from this server
+		// vault, so it is connected right away without asking.
+		const vault = (await this.client().vaults()).vaults.find((v) => v.id === pending);
+		if (!vault) throw new Error(t("login.pendingMissing", { vault: pendingName }));
+		await this.connect(vault);
 	}
 
 	async logout() {

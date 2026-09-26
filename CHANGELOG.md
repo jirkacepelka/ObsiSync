@@ -2,6 +2,11 @@
 
 Each `## <version>` section below becomes the description of that GitHub release.
 
+## 0.3.5
+
+- **Download for Obsidian**: every vault in the web admin can be downloaded as a ready-to-open Obsidian vault with its notes and the SimpleSync plugin already installed, enabled and set up (server address, name, vault). Open the folder in Obsidian, trust it, enter your password, and it connects by itself. The Plugin page offers the same as an empty starter vault. The ZIP never contains a password or token.
+- Conflict copies are named after the user who made the edit, e.g. `Note (conflict 2026-09-25 1530 jirka).md`, instead of the device.
+
 ## 0.3.4
 
 Security hardening after a review:

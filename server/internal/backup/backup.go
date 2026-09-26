@@ -143,11 +143,20 @@ func (s *Service) writeZipFile(ctx context.Context, v *store.Vault, b *store.Bac
 // WriteZip streams the given files as a ZIP archive.
 func (s *Service) WriteZip(w io.Writer, files []store.FileEntry) error {
 	zw := zip.NewWriter(w)
+	if err := s.AddToZip(zw, "", files, nil); err != nil {
+		return err
+	}
+	return zw.Close()
+}
+
+// AddToZip writes the live files into zw under prefix, leaving out paths
+// for which skip returns true.
+func (s *Service) AddToZip(zw *zip.Writer, prefix string, files []store.FileEntry, skip func(path string) bool) error {
 	for _, f := range files {
-		if f.Deleted {
+		if f.Deleted || (skip != nil && skip(f.Path)) {
 			continue
 		}
-		hdr := &zip.FileHeader{Name: f.Path, Method: zip.Deflate, Modified: time.UnixMilli(f.Mtime)}
+		hdr := &zip.FileHeader{Name: prefix + f.Path, Method: zip.Deflate, Modified: time.UnixMilli(f.Mtime)}
 		fw, err := zw.CreateHeader(hdr)
 		if err != nil {
 			return err
@@ -162,7 +171,7 @@ func (s *Service) WriteZip(w io.Writer, files []store.FileEntry) error {
 			return err
 		}
 	}
-	return zw.Close()
+	return nil
 }
 
 func (s *Service) expire(ctx context.Context, v *store.Vault, cutoff time.Time) error {

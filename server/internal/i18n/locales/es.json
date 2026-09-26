@@ -213,5 +213,16 @@
   "msg.csrf": "Formulario no válido (CSRF). Recarga la página e inténtalo de nuevo.",
   "msg.adminOnly": "Esta página es solo para administradores.",
   "msg.vaultNotFound": "La bóveda no existe o no tienes acceso.",
-  "msg.forbidden": "No tienes permiso para esta acción."
+  "msg.forbidden": "No tienes permiso para esta acción.",
+  "obsidian.download": "Descargar para Obsidian",
+  "obsidian.downloadHint": "Un ZIP con las notas de esta bóveda y el plugin SimpleSync ya configurado. Descomprímelo, en Obsidian elige «Open folder as vault», pulsa «Trust author and enable plugins» e introduce tu contraseña.",
+  "plugin.easyTitle": "Lo más fácil: una bóveda lista",
+  "plugin.easyDesc": "Descarga una bóveda de Obsidian con el plugin SimpleSync ya instalado y configurado para este servidor.",
+  "plugin.easyDownload": "Descargar bóveda lista (ZIP)",
+  "plugin.easyStep1": "Descomprime el archivo, por ejemplo en Documentos.",
+  "plugin.easyStep2": "En Obsidian elige «Open folder as vault» y selecciona la carpeta descomprimida.",
+  "plugin.easyStep3": "Pulsa «Trust author and enable plugins».",
+  "plugin.easyStep4": "Introduce tu contraseña en la ventana que aparece y elige una bóveda. Listo.",
+  "plugin.easyVaults": "También puedes descargar una bóveda con sus notas: «Descargar para Obsidian» en la lista de bóvedas.",
+  "plugin.manualTitle": "Avanzado: instalar el plugin en una bóveda existente o en el móvil"
 }

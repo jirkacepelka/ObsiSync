@@ -25,6 +25,12 @@ export const cs: Dict = {
 	"massDelete.redownload": "Stáhnout zpět ze serveru",
 	"massDelete.delete": "Smazat i na serveru",
 
+	"loginModal.title": "Přihlášení do SimpleSync",
+	"loginModal.intro": "Server: {server}. Zadej heslo a přihlas se.",
+	"loginModal.introVault": "Tento vault se synchronizuje s vaultem „{vault}“ na {server}. Zadej heslo a připoj ho.",
+	"loginModal.connected": "SimpleSync: připojeno k „{vault}“, synchronizuji…",
+	"loginModal.pickVault": "SimpleSync: přihlášeno. Vyber vault v nastavení pluginu.",
+	"login.pendingMissing": "Přihlášení proběhlo, ale vault „{vault}“ tento účet nemá k dispozici. Vyber vault níže.",
 	"login.intro": "Vyplň adresu svého SimpleSync serveru a své přihlašovací údaje.",
 	"login.server": "Adresa serveru",
 	"login.serverDesc": "Např. https://sync.mojedomena.cz nebo 192.168.1.10:8080",

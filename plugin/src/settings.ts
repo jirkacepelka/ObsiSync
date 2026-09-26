@@ -1,4 +1,4 @@
-import { App, ButtonComponent, DropdownComponent, Modal, PluginSettingTab, requireApiVersion, Setting, type SettingDefinitionItem } from "obsidian";
+import { App, ButtonComponent, Notice, DropdownComponent, Modal, PluginSettingTab, requireApiVersion, Setting, type SettingDefinitionItem } from "obsidian";
 import { insecureRemote, normalizeServerUrl, type VaultInfo } from "./engine/client";
 import { LANGUAGES, t } from "./i18n";
 import type SimpleSyncPlugin from "./main";
@@ -35,6 +35,82 @@ export class ConfirmModal extends Modal {
 				if (c.warning) b.setWarning();
 			});
 		}
+	}
+
+	onClose() {
+		this.contentEl.empty();
+	}
+}
+
+/** Asks before a password would cross the internet unencrypted. */
+export function confirmInsecure(app: App, server: string): Promise<boolean> {
+	if (!insecureRemote(server)) return Promise.resolve(true);
+	return new Promise((resolve) =>
+		new ConfirmModal(app, t("http.title"), t("http.body"), [
+			{ label: t("replace.cancel"), cta: true, action: () => resolve(false) },
+			{ label: t("http.continue"), warning: true, action: () => resolve(true) },
+		]).open(),
+	);
+}
+
+/**
+ * Shown on the first start of a vault downloaded from the web admin: the
+ * server, name and vault are preset, only the password is missing.
+ */
+export class LoginModal extends Modal {
+	constructor(
+		app: App,
+		private plugin: SimpleSyncPlugin,
+	) {
+		super(app);
+	}
+
+	onOpen() {
+		const s = this.plugin.settings;
+		let user = s.username;
+		let pass = "";
+		let busy = false;
+		this.titleEl.setText(t("loginModal.title"));
+		this.contentEl.createEl("p", {
+			text: s.pendingVaultName ? t("loginModal.introVault", { vault: s.pendingVaultName, server: s.serverUrl }) : t("loginModal.intro", { server: s.serverUrl }),
+		});
+		new Setting(this.contentEl).setName(t("login.name")).addText((c) => {
+			c.setValue(user).onChange((v) => (user = v));
+			c.inputEl.autocapitalize = "off";
+			c.inputEl.autocomplete = "username";
+		});
+		const errorEl = this.contentEl.createDiv({ cls: "obsisync-error" });
+		let button: ButtonComponent | undefined;
+		const submit = async () => {
+			if (busy) return;
+			if (!user.trim() || !pass) {
+				errorEl.setText(t("login.missing"));
+				return;
+			}
+			if (!(await confirmInsecure(this.app, s.serverUrl))) return;
+			busy = true;
+			errorEl.setText("");
+			button?.setButtonText(t("login.busy")).setDisabled(true);
+			try {
+				await this.plugin.login(s.serverUrl, user.trim(), pass);
+				this.close();
+				new Notice(this.plugin.connected ? t("loginModal.connected", { vault: this.plugin.settings.vaultName }) : t("loginModal.pickVault"));
+			} catch (e) {
+				errorEl.setText(e instanceof Error ? e.message : String(e));
+			}
+			busy = false;
+			button?.setButtonText(t("login.button")).setDisabled(false);
+		};
+		new Setting(this.contentEl).setName(t("login.password")).addText((c) => {
+			c.inputEl.type = "password";
+			c.inputEl.autocomplete = "current-password";
+			c.onChange((v) => (pass = v));
+			c.inputEl.addEventListener("keydown", (e) => e.key === "Enter" && void submit());
+			window.setTimeout(() => c.inputEl.focus(), 50);
+		});
+		new Setting(this.contentEl).addButton((b) => {
+			button = b.setButtonText(t("login.button")).setCta().onClick(() => void submit());
+		});
 	}
 
 	onClose() {
@@ -207,13 +283,8 @@ export class SimpleSyncSettingTab extends PluginSettingTab {
 				this.form.pass = "";
 				this.vaults = null;
 			});
-		// Warn before a password would cross the internet unencrypted.
-		const submit = () => {
-			if (!insecureRemote(normalizeServerUrl(this.form.url))) return login();
-			new ConfirmModal(this.app, t("http.title"), t("http.body"), [
-				{ label: t("replace.cancel"), cta: true, action: () => {} },
-				{ label: t("http.continue"), warning: true, action: () => void login() },
-			]).open();
+		const submit = async () => {
+			if (await confirmInsecure(this.app, normalizeServerUrl(this.form.url))) await login();
 		};
 		return [
 			{

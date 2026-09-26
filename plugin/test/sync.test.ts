@@ -33,7 +33,7 @@ class Device {
 			state,
 			saveState: async () => {},
 			ignore,
-			deviceName: this.name,
+			author: this.name,
 			onConflict: (_p, copy) => this.conflicts.push(copy),
 		});
 		return this;
@@ -52,7 +52,7 @@ async function newVault(): Promise<number> {
 
 async function pair() {
 	const id = await newVault();
-	return [await new Device("Notebook").connect(id), await new Device("iPhone").connect(id)] as const;
+	return [await new Device("jirka").connect(id), await new Device("petra").connect(id)] as const;
 }
 
 describe("sync engine against a real server", () => {
@@ -109,7 +109,7 @@ describe("sync engine against a real server", () => {
 		expect(res.conflicts).toBe(1);
 		expect(b.fs.get("n.md")).toBe("verze A\n");
 		const copy = b.conflicts[0];
-		expect(copy).toMatch(/^n \(conflict .* iPhone\)\.md$/);
+		expect(copy).toMatch(/^n \(conflict .* petra\)\.md$/);
 		expect(b.fs.get(copy)).toBe("verze B\n");
 		await a.sync();
 		expect(a.fs.snapshot()).toEqual(b.fs.snapshot());
@@ -224,6 +224,28 @@ describe("sync engine against a real server", () => {
 		await b.sync();
 		await a.sync();
 		expect(a.fs.get("n.md")).toBe("edited on B");
+	});
+
+	it("a vault downloaded for Obsidian connects without trashing or uploading anything", async () => {
+		const id = await newVault();
+		const a = await new Device("A").connect(id);
+		a.fs.set("Deník/Dnes.md", "# Ahoj");
+		a.fs.set("obr.png", "PNG");
+		await a.sync();
+		const head = (await a.client.changes(id, 0)).head;
+
+		// The ZIP holds exactly the server's files; one note changed on the
+		// server after the download.
+		const b = await new Device("B").connect(id, true);
+		b.fs.set("Deník/Dnes.md", "# Ahoj");
+		b.fs.set("obr.png", "PNG");
+		a.fs.set("obr.png", "PNG v2");
+		await a.sync();
+		const r = await b.sync();
+		expect(b.fs.notes()).toEqual({ "Deník/Dnes.md": "# Ahoj", "obr.png": "PNG v2" });
+		expect(r.pushed).toBe(0);
+		expect(b.fs.get(".trash/Deník/Dnes.md")).toBeUndefined();
+		expect((await b.client.changes(id, 0)).head).toBe(head + 1);
 	});
 
 	it("an interrupted first connect stays in server-first mode", async () => {

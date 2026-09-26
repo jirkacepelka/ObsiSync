@@ -213,5 +213,16 @@
   "msg.csrf": "Modulo non valido (CSRF). Ricarica la pagina e riprova.",
   "msg.adminOnly": "Questa pagina è riservata agli amministratori.",
   "msg.vaultNotFound": "Il vault non esiste o non hai accesso.",
-  "msg.forbidden": "Non hai il permesso per questa azione."
+  "msg.forbidden": "Non hai il permesso per questa azione.",
+  "obsidian.download": "Scarica per Obsidian",
+  "obsidian.downloadHint": "Uno ZIP con le note di questo vault e il plugin SimpleSync già configurato. Estrailo, in Obsidian scegli «Open folder as vault», fai clic su «Trust author and enable plugins» e inserisci la password.",
+  "plugin.easyTitle": "Il modo più semplice: un vault pronto",
+  "plugin.easyDesc": "Scarica un vault di Obsidian con il plugin SimpleSync già installato e configurato per questo server.",
+  "plugin.easyDownload": "Scarica il vault pronto (ZIP)",
+  "plugin.easyStep1": "Estrai il file, ad esempio in Documenti.",
+  "plugin.easyStep2": "In Obsidian scegli «Open folder as vault» e seleziona la cartella estratta.",
+  "plugin.easyStep3": "Fai clic su «Trust author and enable plugins».",
+  "plugin.easyStep4": "Inserisci la password nella finestra che appare e scegli un vault. Fatto.",
+  "plugin.easyVaults": "Puoi anche scaricare un vault con le sue note: «Scarica per Obsidian» nell'elenco dei vault.",
+  "plugin.manualTitle": "Avanzato: installare il plugin in un vault esistente o sul telefono"
 }

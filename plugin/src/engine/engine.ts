@@ -17,7 +17,8 @@ export interface EngineOptions {
 	state: SyncState;
 	saveState: (s: SyncState) => Promise<void>;
 	ignore: (path: string) => boolean;
-	deviceName: string;
+	/** Who made the local edits; named in conflict copies (the user name). */
+	author: string;
 	log?: (msg: string) => void;
 	/** Called when a conflict could not be merged and a copy was created. */
 	onConflict?: (path: string, copyPath: string) => void;
@@ -363,10 +364,10 @@ export class SyncEngine {
 		const dot = name.lastIndexOf(".");
 		const stem = dot > 0 ? name.slice(0, dot) : name;
 		const ext = dot > 0 ? name.slice(dot) : "";
-		const device = this.o.deviceName.replace(/[\\/:*?"<>|#^[\]]/g, "").trim() || t("engine.device");
+		const author = this.o.author.replace(/[\\/:*?"<>|#^[\]]/g, "").trim() || t("engine.device");
 		for (let n = 1; ; n++) {
 			const suffix = n === 1 ? "" : ` ${n}`;
-			const p = `${dir}${stem} (${t("engine.conflictWord")} ${stamp} ${device}${suffix})${ext}`;
+			const p = `${dir}${stem} (${t("engine.conflictWord")} ${stamp} ${author}${suffix})${ext}`;
 			if (!local.has(p) && !(await this.o.fs.stat(p))) return p;
 		}
 	}

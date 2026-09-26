@@ -213,5 +213,16 @@
   "msg.csrf": "Invalid form (CSRF). Reload the page and try again.",
   "msg.adminOnly": "This page is for administrators only.",
   "msg.vaultNotFound": "The vault doesn't exist or you have no access to it.",
-  "msg.forbidden": "You don't have permission for this action."
+  "msg.forbidden": "You don't have permission for this action.",
+  "obsidian.download": "Download for Obsidian",
+  "obsidian.downloadHint": "A ZIP with this vault's notes and the SimpleSync plugin already set up. Unzip it, in Obsidian choose “Open folder as vault”, click “Trust author and enable plugins” and enter your password.",
+  "plugin.easyTitle": "The easy way: a ready-made vault",
+  "plugin.easyDesc": "Download an Obsidian vault with the SimpleSync plugin already installed and set up for this server.",
+  "plugin.easyDownload": "Download ready-made vault (ZIP)",
+  "plugin.easyStep1": "Unzip the file, for example into Documents.",
+  "plugin.easyStep2": "In Obsidian choose “Open folder as vault” and pick the unzipped folder.",
+  "plugin.easyStep3": "Click “Trust author and enable plugins”.",
+  "plugin.easyStep4": "Enter your password in the window that appears and pick a vault. Done.",
+  "plugin.easyVaults": "You can also download a vault including its notes: use “Download for Obsidian” in the vault list.",
+  "plugin.manualTitle": "Advanced: install the plugin into an existing vault or on a phone"
 }

@@ -170,12 +170,8 @@ func (w *Web) pluginAvailable() bool {
 }
 
 func (w *Web) plugin(rw http.ResponseWriter, r *http.Request, p *page) {
-	p.Title, p.Nav = "Plugin pro Obsidian", "plugin"
-	scheme := "http"
-	if secure(r) {
-		scheme = "https"
-	}
-	p.D = map[string]any{"Available": w.pluginAvailable(), "ServerURL": scheme + "://" + r.Host}
+	p.Title, p.Nav = w.tr(r, "plugin.title"), "plugin"
+	p.D = map[string]any{"Available": w.pluginAvailable(), "ServerURL": serverURL(r)}
 	w.render(rw, r, "plugin", p)
 }
 

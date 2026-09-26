@@ -87,6 +87,17 @@ Pull the new image and recreate the container (on ZimaOS: the app's settings →
 
 ## Connecting Obsidian
 
+### The easy way: download a ready-made vault
+
+In the web admin click **Download for Obsidian** next to a vault (or **Plugin → Download ready-made vault** for an empty one). You get a ZIP with a folder that contains the vault's notes and the SimpleSync plugin, already installed and set up for your server and name (no password or token is ever put in the ZIP).
+
+1. Unzip it, for example into Documents.
+2. In Obsidian choose **Open folder as vault** and pick the unzipped folder.
+3. Click **Trust author and enable plugins**.
+4. Enter your password in the window that appears. The vault connects by itself and starts syncing.
+
+### Manually: an existing vault or a phone
+
 1. **Install the plugin.** In the web admin click **Plugin → Download plugin (ZIP)**, unzip it into `<vault>/.obsidian/plugins/` (a `simplesync` folder appears) and enable *Settings → Community plugins → SimpleSync*. On a phone, the easiest way is the **BRAT** plugin with the repository `jirkacepelka/SimpleSync`.
 2. In the plugin settings enter the **server address, name and password**, then click **Log in**.
 3. Pick a vault from the list and click **Connect**. Or use **Create a new vault from this one**, which uploads the current vault to the server.
@@ -191,7 +202,7 @@ Obsidian (desktop / mobile)                 Server (1 Docker container)
 - Every vault has a **growing revision number**. A device remembers the last revision it saw and fetches only changes after it.
 - For every file, each device remembers the "base" hash: the version it last agreed on with the server. Writes to the server are **compare-and-swap**: a write only succeeds if the server still has that base version. Otherwise it's a conflict:
   - text files: **3-way merge** (changes on different lines are combined),
-  - overlapping changes and binary files: the server version wins and the local one is saved as `Note (conflict 2026-09-25 1530 iPhone).md`,
+  - overlapping changes and binary files: the server version wins and the local one is saved as `Note (conflict 2026-09-25 1530 jirka).md` (with the name of the user whose edit it is),
   - edit vs. delete: the edit wins.
 - Over WebSocket the server only says "the vault has a new revision"; devices then fetch the changes. As a fallback the plugin syncs every minute, 2 s after a file changes, and when the app comes back to the foreground.
 - Paths are normalized to Unicode NFC (macOS/iOS vs. Windows vs. Linux). Paths that differ only in letter case are rejected, because they would collide on Windows/macOS.

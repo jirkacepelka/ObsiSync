@@ -213,5 +213,16 @@
   "msg.csrf": "Formulaire invalide (CSRF). Recharge la page et réessaie.",
   "msg.adminOnly": "Cette page est réservée aux administrateurs.",
   "msg.vaultNotFound": "Le coffre n'existe pas ou tu n'y as pas accès.",
-  "msg.forbidden": "Tu n'as pas l'autorisation pour cette action."
+  "msg.forbidden": "Tu n'as pas l'autorisation pour cette action.",
+  "obsidian.download": "Télécharger pour Obsidian",
+  "obsidian.downloadHint": "Un ZIP avec les notes de ce coffre et le plugin SimpleSync déjà configuré. Décompresse-le, dans Obsidian choisis « Open folder as vault », clique sur « Trust author and enable plugins » et saisis ton mot de passe.",
+  "plugin.easyTitle": "Le plus simple : un coffre tout prêt",
+  "plugin.easyDesc": "Télécharge un coffre Obsidian avec le plugin SimpleSync déjà installé et configuré pour ce serveur.",
+  "plugin.easyDownload": "Télécharger le coffre tout prêt (ZIP)",
+  "plugin.easyStep1": "Décompresse le fichier, par exemple dans Documents.",
+  "plugin.easyStep2": "Dans Obsidian, choisis « Open folder as vault » et sélectionne le dossier décompressé.",
+  "plugin.easyStep3": "Clique sur « Trust author and enable plugins ».",
+  "plugin.easyStep4": "Saisis ton mot de passe dans la fenêtre qui s'affiche et choisis un coffre. C'est tout.",
+  "plugin.easyVaults": "Tu peux aussi télécharger un coffre avec ses notes : « Télécharger pour Obsidian » dans la liste des coffres.",
+  "plugin.manualTitle": "Avancé : installer le plugin dans un coffre existant ou sur un téléphone"
 }

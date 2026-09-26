@@ -24,6 +24,12 @@ export const en = {
 	"massDelete.redownload": "Download them again",
 	"massDelete.delete": "Delete on the server too",
 
+	"loginModal.title": "Log in to SimpleSync",
+	"loginModal.intro": "Server: {server}. Enter your password to log in.",
+	"loginModal.introVault": "This vault syncs with “{vault}” on {server}. Enter your password to connect it.",
+	"loginModal.connected": "SimpleSync: connected to “{vault}”, syncing…",
+	"loginModal.pickVault": "SimpleSync: logged in. Pick a vault in the plugin settings.",
+	"login.pendingMissing": "Logged in, but the vault “{vault}” is not available to this account. Pick a vault below.",
 	"login.intro": "Enter the address of your SimpleSync server and your login.",
 	"login.server": "Server address",
 	"login.serverDesc": "For example https://sync.example.com or 192.168.1.10:8080",

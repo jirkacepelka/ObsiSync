@@ -213,5 +213,16 @@
   "msg.csrf": "Neplatný formulář (CSRF). Obnov stránku a zkus to znovu.",
   "msg.adminOnly": "Tato stránka je jen pro administrátory.",
   "msg.vaultNotFound": "Vault neexistuje nebo k němu nemáš přístup.",
-  "msg.forbidden": "K této akci nemáš oprávnění."
+  "msg.forbidden": "K této akci nemáš oprávnění.",
+  "obsidian.download": "Stáhnout pro Obsidian",
+  "obsidian.downloadHint": "ZIP s poznámkami tohoto vaultu a s už nastaveným pluginem SimpleSync. Rozbal ho, v Obsidianu zvol „Open folder as vault“, klikni na „Trust author and enable plugins“ a zadej heslo.",
+  "plugin.easyTitle": "Nejjednodušší cesta: hotový vault",
+  "plugin.easyDesc": "Stáhni si vault pro Obsidian, ve kterém už je plugin SimpleSync nainstalovaný a nastavený na tento server.",
+  "plugin.easyDownload": "Stáhnout hotový vault (ZIP)",
+  "plugin.easyStep1": "Rozbal soubor, třeba do Dokumentů.",
+  "plugin.easyStep2": "V Obsidianu zvol „Open folder as vault“ a vyber rozbalenou složku.",
+  "plugin.easyStep3": "Klikni na „Trust author and enable plugins“.",
+  "plugin.easyStep4": "V okně, které se objeví, zadej heslo a vyber vault. Hotovo.",
+  "plugin.easyVaults": "Vault jde stáhnout i rovnou s poznámkami: použij „Stáhnout pro Obsidian“ v seznamu vaultů.",
+  "plugin.manualTitle": "Pokročilé: instalace pluginu do existujícího vaultu nebo na telefon"
 }

@@ -8,6 +8,12 @@
   </div>
   <div class="muted">{{$.T "files.summary" (index .D "Stats").Files (bytes (index .D "Stats").Bytes)}} · <a href="/vaults/{{$v.ID}}/zip">{{$.T "files.downloadAll"}}</a></div>
 </div>
+{{if $.Bundle}}
+<div class="card getvault">
+  <a class="button primary" href="/vaults/{{$v.ID}}/obsidian.zip">⬇ {{$.T "obsidian.download"}}</a>
+  <span class="muted">{{$.T "obsidian.downloadHint"}}</span>
+</div>
+{{end}}
 <table>
   <thead><tr><th>{{$.T "col.name"}}</th><th>{{$.T "col.size"}}</th><th>{{$.T "col.modified"}}</th></tr></thead>
   <tbody>
