@@ -69,6 +69,7 @@ export const sk: Dict = {
 	"engine.corrupt": "poškodený prenos {hash}",
 	"engine.conflictWord": "konflikt",
 	"engine.device": "zariadenie",
+	"settings.error": "Chyba",
 	"settings.language": "Jazyk",
 	"settings.languageDesc": "Jazyk tohto pluginu.",
 	"settings.languageAuto": "Rovnaký ako Obsidian",

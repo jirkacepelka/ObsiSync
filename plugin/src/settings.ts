@@ -1,4 +1,4 @@
-import { App, Modal, PluginSettingTab, Setting } from "obsidian";
+import { App, ButtonComponent, DropdownComponent, Modal, PluginSettingTab, requireApiVersion, Setting, type SettingDefinitionItem } from "obsidian";
 import { normalizeServerUrl, type VaultInfo } from "./engine/client";
 import { LANGUAGES, t } from "./i18n";
 import type SimpleSyncPlugin from "./main";
@@ -42,183 +42,330 @@ export class ConfirmModal extends Modal {
 	}
 }
 
+/**
+ * One settings row. build() fills a fresh Setting and may return a sync
+ * function that brings the row up to date after the state changed.
+ */
+interface Row {
+	name: string;
+	desc?: string;
+	visible: () => boolean;
+	build: (s: Setting) => (() => void) | void;
+}
+
+/**
+ * The settings tab. On Obsidian 1.13+ the rows are handed over as setting
+ * definitions (so they show up in the settings search); older versions
+ * render the same rows in display().
+ */
 export class SimpleSyncSettingTab extends PluginSettingTab {
 	private error = "";
 	private busy = false;
 	private vaults: VaultInfo[] | null = null;
 	private canCreate = false;
-	private statusEl: HTMLElement | null = null;
+	/** What the user is typing into the login form (the password is never saved). */
+	private form = { url: "", user: "", pass: "" };
+	/** Sync functions of the rows currently on screen. */
+	private syncs = new Set<() => void>();
 
 	constructor(
 		app: App,
 		private plugin: SimpleSyncPlugin,
 	) {
 		super(app, plugin);
+		this.resetForm();
 	}
 
-	hide() {
-		this.plugin.onStatusChange = undefined;
+	private resetForm() {
+		this.form = { url: this.plugin.settings.serverUrl, user: this.plugin.settings.username, pass: "" };
 	}
 
+	private get declarative(): boolean {
+		return requireApiVersion("1.13.0");
+	}
+
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return this.rows().map((r) => ({
+			name: r.name,
+			desc: r.desc,
+			visible: r.visible,
+			render: (setting: Setting) => this.mount(r, setting),
+		}));
+	}
+
+	/** Fallback for Obsidian older than 1.13. */
 	display() {
 		const { containerEl } = this;
 		containerEl.empty();
 		containerEl.addClass("obsisync-settings");
-		this.plugin.onStatusChange = () => this.statusLine();
-		const s = this.plugin.settings;
-		if (!s.token) this.loginForm();
-		else if (s.vaultId === null) this.vaultPicker();
-		else this.connectedView();
-		if (this.error) containerEl.createDiv({ cls: "obsisync-error", text: this.error });
-		this.languagePicker();
+		this.syncs.clear();
+		for (const r of this.rows()) {
+			if (!r.visible()) continue;
+			const setting = new Setting(containerEl).setName(r.name);
+			if (r.desc) setting.setDesc(r.desc);
+			this.mount(r, setting);
+		}
+	}
+
+	hide() {
+		this.plugin.onStatusChange = undefined;
+		this.syncs.clear();
+	}
+
+	private mount(r: Row, setting: Setting): () => void {
+		this.plugin.onStatusChange = () => this.syncAll();
+		const sync = r.build(setting);
+		if (!sync) return () => {};
+		this.syncs.add(sync);
+		sync();
+		return () => this.syncs.delete(sync);
+	}
+
+	private syncAll() {
+		for (const sync of [...this.syncs]) sync();
+	}
+
+	/** Shows the current state: which rows are visible and what they say. */
+	private refresh() {
+		if (!this.declarative) {
+			this.display();
+			return;
+		}
+		this.update();
+		this.refreshDomState();
+		this.syncAll();
 	}
 
 	private async run(fn: () => Promise<void>) {
 		this.busy = true;
 		this.error = "";
-		this.display();
+		this.refresh();
 		try {
 			await fn();
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 		}
 		this.busy = false;
-		this.display();
+		this.refresh();
 	}
 
-	private languagePicker() {
-		new Setting(this.containerEl)
-			.setName(t("settings.language"))
-			.setDesc(t("settings.languageDesc"))
-			.addDropdown((d) => {
-				d.addOption("auto", t("settings.languageAuto"));
-				for (const l of LANGUAGES) d.addOption(l.code, l.name);
-				d.setValue(this.plugin.settings.language).onChange(async (v) => {
-					await this.plugin.setLanguage(v);
-					this.display();
-				});
-			});
+	private rows(): Row[] {
+		const s = this.plugin.settings;
+		const loggedOut = () => !s.token;
+		const picking = () => !!s.token && s.vaultId === null;
+		const connected = () => !!s.token && s.vaultId !== null;
+		return [
+			...this.loginRows(loggedOut),
+			...this.pickerRows(picking),
+			...this.connectedRows(connected),
+			{
+				name: t("settings.error"),
+				visible: () => !!this.error,
+				build: (row) => {
+					row.settingEl.addClass("obsisync-error");
+					return () => {
+						row.setDesc(this.error);
+						row.settingEl.toggle(!!this.error);
+					};
+				},
+			},
+			{
+				name: t("settings.language"),
+				desc: t("settings.languageDesc"),
+				visible: () => true,
+				build: (row) => {
+					row.addDropdown((d) => {
+						d.addOption("auto", t("settings.languageAuto"));
+						for (const l of LANGUAGES) d.addOption(l.code, l.name);
+						d.setValue(s.language).onChange(async (v) => {
+							await this.plugin.setLanguage(v);
+							this.refresh();
+						});
+					});
+				},
+			},
+		];
 	}
 
 	// ---- step 1: server, name, password ----
 
-	private loginForm() {
-		const el = this.containerEl;
-		el.createEl("p", { text: t("login.intro") });
-		let url = this.plugin.settings.serverUrl;
-		let user = this.plugin.settings.username;
-		let pass = "";
-		new Setting(el)
-			.setName(t("login.server"))
-			.setDesc(t("login.serverDesc"))
-			.addText((c) =>
-				c
-					.setPlaceholder("https://…")
-					.setValue(url)
-					.onChange((v) => (url = v)),
-			);
-		new Setting(el).setName(t("login.name")).addText((c) => {
-			c.setValue(user).onChange((v) => (user = v));
-			c.inputEl.autocapitalize = "off";
-			c.inputEl.autocomplete = "username";
-		});
+	private loginRows(visible: () => boolean): Row[] {
 		const submit = () =>
 			this.run(async () => {
-				const server = normalizeServerUrl(url);
-				if (!server || !user || !pass) throw new Error(t("login.missing"));
-				await this.plugin.login(server, user.trim(), pass);
+				const server = normalizeServerUrl(this.form.url);
+				const user = this.form.user.trim();
+				if (!server || !user || !this.form.pass) throw new Error(t("login.missing"));
+				await this.plugin.login(server, user, this.form.pass);
+				this.form.pass = "";
 				this.vaults = null;
 			});
-		new Setting(el).setName(t("login.password")).addText((c) => {
-			c.inputEl.type = "password";
-			c.inputEl.autocomplete = "current-password";
-			c.onChange((v) => (pass = v));
-			c.inputEl.addEventListener("keydown", (e) => e.key === "Enter" && submit());
-		});
-		new Setting(el).addButton((b) =>
-			b
-				.setButtonText(this.busy ? t("login.busy") : t("login.button"))
-				.setCta()
-				.setDisabled(this.busy)
-				.onClick(submit),
-		);
+		return [
+			{
+				name: t("login.server"),
+				desc: `${t("login.intro")} ${t("login.serverDesc")}`,
+				visible,
+				build: (row) => {
+					row.addText((c) =>
+						c
+							.setPlaceholder("https://…")
+							.setValue(this.form.url)
+							.onChange((v) => (this.form.url = v)),
+					);
+				},
+			},
+			{
+				name: t("login.name"),
+				visible,
+				build: (row) => {
+					row.addText((c) => {
+						c.setValue(this.form.user).onChange((v) => (this.form.user = v));
+						c.inputEl.autocapitalize = "off";
+						c.inputEl.autocomplete = "username";
+					});
+				},
+			},
+			{
+				name: t("login.password"),
+				visible,
+				build: (row) => {
+					row.addText((c) => {
+						c.inputEl.type = "password";
+						c.inputEl.autocomplete = "current-password";
+						c.setValue(this.form.pass).onChange((v) => (this.form.pass = v));
+						c.inputEl.addEventListener("keydown", (e) => e.key === "Enter" && void submit());
+					});
+				},
+			},
+			{
+				name: t("login.button"),
+				visible,
+				build: (row) => {
+					let button: ButtonComponent | undefined;
+					row.addButton((b) => {
+						button = b.setCta().onClick(() => void submit());
+					});
+					return () => {
+						button?.setButtonText(this.busy ? t("login.busy") : t("login.button")).setDisabled(this.busy);
+					};
+				},
+			},
+		];
 	}
 
 	// ---- step 2: pick a vault ----
 
-	private account(el: HTMLElement) {
+	private accountRow(visible: () => boolean): Row {
 		const s = this.plugin.settings;
-		new Setting(el)
-			.setName(t("account.loggedIn", { user: s.username }))
-			.setDesc(s.serverUrl)
-			.addButton((b) => b.setButtonText(t("account.logout")).onClick(() => this.run(() => this.plugin.logout())));
+		return {
+			name: t("account.logout"),
+			visible,
+			build: (row) => {
+				row.addButton((b) =>
+					b.setButtonText(t("account.logout")).onClick(() =>
+						this.run(async () => {
+							await this.plugin.logout();
+							this.resetForm();
+						}),
+					),
+				);
+				return () => {
+					row.setName(t("account.loggedIn", { user: s.username }));
+					row.setDesc(s.serverUrl);
+				};
+			},
+		};
 	}
 
-	private vaultPicker() {
-		const el = this.containerEl;
-		this.account(el);
-		const refresh = () =>
-			new Setting(el).addButton((b) =>
-				b.setButtonText(t("vaults.refresh")).onClick(() => {
-					this.vaults = null;
-					this.error = "";
-					this.display();
-				}),
-			);
-		if (this.vaults === null) {
-			if (this.error) {
-				refresh();
-				return;
-			}
-			el.createEl("p", { text: t("vaults.loading") });
-			if (!this.busy) {
-				void this.run(async () => {
-					const r = await this.plugin.client().vaults();
-					this.vaults = r.vaults;
-					this.canCreate = r.can_create;
-				});
-			}
-			return;
-		}
-		const vaults = this.vaults;
-		let selected = vaults[0]?.id;
-		if (vaults.length) {
-			new Setting(el)
-				.setName(t("vaults.label"))
-				.setDesc(t("vaults.desc"))
-				.addDropdown((d) => {
-					for (const v of vaults) d.addOption(String(v.id), `${v.name} (${t(`role.${v.role}`)})`);
-					d.onChange((v) => (selected = Number(v)));
-				})
-				.addButton((b) =>
-					b
-						.setButtonText(t("vaults.connect"))
-						.setCta()
-						.setDisabled(this.busy)
-						.onClick(() => this.connect(vaults.find((v) => v.id === selected)!)),
-				);
-		} else {
-			el.createEl("p", { text: t("vaults.none") });
-		}
-		if (this.canCreate) {
-			let name = this.app.vault.getName();
-			new Setting(el)
-				.setName(t("vaults.create"))
-				.setDesc(t("vaults.createDesc"))
-				.addText((c) => c.setValue(name).onChange((v) => (name = v)))
-				.addButton((b) =>
-					b
-						.setButtonText(t("vaults.createButton"))
-						.setDisabled(this.busy)
-						.onClick(() =>
+	/** Loads the vault list once; deferred so it never re-renders mid-render. */
+	private loadVaults() {
+		const needed = () => this.vaults === null && !this.error && !this.busy && !!this.plugin.settings.token && this.plugin.settings.vaultId === null;
+		if (!needed()) return;
+		window.setTimeout(() => {
+			if (!needed()) return;
+			void this.run(async () => {
+				const r = await this.plugin.client().vaults();
+				this.vaults = r.vaults;
+				this.canCreate = r.can_create;
+			});
+		}, 0);
+	}
+
+	private pickerRows(visible: () => boolean): Row[] {
+		let selected: number | undefined;
+		return [
+			this.accountRow(visible),
+			{
+				name: t("vaults.label"),
+				visible,
+				build: (row) => {
+					let dropdown: DropdownComponent | undefined;
+					let button: ButtonComponent | undefined;
+					let shown: VaultInfo[] | null = null;
+					row.addDropdown((d) => {
+						dropdown = d.onChange((v) => (selected = Number(v)));
+					});
+					row.addButton((b) => {
+						button = b
+							.setButtonText(t("vaults.connect"))
+							.setCta()
+							.onClick(() => {
+								const v = this.vaults?.find((x) => x.id === selected);
+								if (v) this.connect(v);
+							});
+					});
+					return () => {
+						this.loadVaults();
+						const vaults = this.vaults;
+						if (vaults !== shown && dropdown) {
+							shown = vaults;
+							dropdown.selectEl.empty();
+							for (const v of vaults ?? []) dropdown.addOption(String(v.id), `${v.name} (${t(`role.${v.role}`)})`);
+							selected = vaults?.[0]?.id;
+						}
+						const has = !!vaults?.length;
+						row.setDesc(vaults === null ? (this.error ? "" : t("vaults.loading")) : has ? t("vaults.desc") : t("vaults.none"));
+						dropdown?.selectEl.toggle(has);
+						button?.buttonEl.toggle(has);
+						button?.setDisabled(this.busy);
+					};
+				},
+			},
+			{
+				name: t("vaults.create"),
+				desc: t("vaults.createDesc"),
+				visible: () => visible() && this.canCreate,
+				build: (row) => {
+					let name = this.app.vault.getName();
+					let button: ButtonComponent | undefined;
+					row.addText((c) => c.setValue(name).onChange((v) => (name = v)));
+					row.addButton((b) => {
+						button = b.setButtonText(t("vaults.createButton")).onClick(() =>
 							this.run(async () => {
 								const v = await this.plugin.client().createVault(name.trim());
 								await this.plugin.connect(v);
 							}),
-						),
-				);
-		}
-		refresh();
+						);
+					});
+					return () => {
+						row.settingEl.toggle(visible() && this.canCreate);
+						button?.setDisabled(this.busy);
+					};
+				},
+			},
+			{
+				name: t("vaults.refresh"),
+				visible,
+				build: (row) => {
+					row.addButton((b) =>
+						b.setButtonText(t("vaults.refresh")).onClick(() => {
+							this.vaults = null;
+							this.error = "";
+							this.refresh();
+						}),
+					);
+				},
+			},
+		];
 	}
 
 	/**
@@ -239,49 +386,59 @@ export class SimpleSyncSettingTab extends PluginSettingTab {
 
 	// ---- step 3: connected ----
 
-	private statusLine() {
-		if (!this.statusEl) return;
-		const st = this.plugin.status;
-		this.statusEl.setText(st.text + (st.at ? ` · ${st.at.toLocaleTimeString()}` : ""));
-		this.statusEl.toggleClass("obsisync-error", st.kind === "error");
-	}
-
-	private connectedView() {
-		const el = this.containerEl;
+	private connectedRows(visible: () => boolean): Row[] {
 		const s = this.plugin.settings;
-		new Setting(el)
-			.setName(t("connected.title", { vault: s.vaultName }))
-			.setDesc(`${s.username} @ ${s.serverUrl}`)
-			.addButton((b) =>
-				b
-					.setButtonText(t("connected.syncNow"))
-					.setCta()
-					.onClick(() => this.plugin.requestSync(0)),
-			);
-		this.statusEl = el.createDiv({ cls: "obsisync-statusline" });
-		this.statusLine();
-
-		new Setting(el)
-			.setName(t("connected.syncConfig"))
-			.setDesc(t("connected.syncConfigDesc"))
-			.addToggle((c) =>
-				c.setValue(s.syncConfig).onChange(async (v) => {
-					s.syncConfig = v;
-					await this.plugin.saveSettings();
-					await this.plugin.restart(v);
-				}),
-			);
-		new Setting(el)
-			.setName(t("connected.disconnect"))
-			.setDesc(t("connected.disconnectDesc"))
-			.addButton((b) =>
-				b.setButtonText(t("connected.disconnectButton")).onClick(() =>
-					this.run(async () => {
-						await this.plugin.disconnect();
-						this.vaults = null;
-					}),
-				),
-			);
-		this.account(el);
+		return [
+			{
+				name: t("connected.syncNow"),
+				visible,
+				build: (row) => {
+					row.addButton((b) =>
+						b
+							.setButtonText(t("connected.syncNow"))
+							.setCta()
+							.onClick(() => this.plugin.requestSync(0)),
+					);
+					const status = row.infoEl.createDiv({ cls: "obsisync-statusline" });
+					return () => {
+						row.setName(t("connected.title", { vault: s.vaultName }));
+						row.setDesc(`${s.username} @ ${s.serverUrl}`);
+						const st = this.plugin.status;
+						status.setText(st.text + (st.at ? ` · ${st.at.toLocaleTimeString()}` : ""));
+						status.toggleClass("obsisync-error", st.kind === "error");
+					};
+				},
+			},
+			{
+				name: t("connected.syncConfig"),
+				desc: t("connected.syncConfigDesc"),
+				visible,
+				build: (row) => {
+					row.addToggle((c) =>
+						c.setValue(s.syncConfig).onChange(async (v) => {
+							s.syncConfig = v;
+							await this.plugin.saveSettings();
+							await this.plugin.restart(v);
+						}),
+					);
+				},
+			},
+			{
+				name: t("connected.disconnect"),
+				desc: t("connected.disconnectDesc"),
+				visible,
+				build: (row) => {
+					row.addButton((b) =>
+						b.setButtonText(t("connected.disconnectButton")).onClick(() =>
+							this.run(async () => {
+								await this.plugin.disconnect();
+								this.vaults = null;
+							}),
+						),
+					);
+				},
+			},
+			this.accountRow(visible),
+		];
 	}
 }

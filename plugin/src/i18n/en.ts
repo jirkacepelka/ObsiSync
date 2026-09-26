@@ -78,6 +78,7 @@ export const en = {
 	"engine.corrupt": "corrupted transfer {hash}",
 	"engine.conflictWord": "conflict",
 	"engine.device": "device",
+	"settings.error": "Error",
 	"settings.language": "Language",
 	"settings.languageDesc": "Language of this plugin.",
 	"settings.languageAuto": "Same as Obsidian",

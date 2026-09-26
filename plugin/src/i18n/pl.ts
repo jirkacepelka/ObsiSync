@@ -69,6 +69,7 @@ export const pl: Dict = {
 	"engine.corrupt": "uszkodzony transfer {hash}",
 	"engine.conflictWord": "konflikt",
 	"engine.device": "urządzenie",
+	"settings.error": "Błąd",
 	"settings.language": "Język",
 	"settings.languageDesc": "Język tej wtyczki.",
 	"settings.languageAuto": "Taki jak w Obsidianie",

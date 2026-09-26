@@ -68,7 +68,7 @@ export class Client {
 			let code = "http_" + res.status;
 			let msg = t("err.server", { status: res.status });
 			try {
-				const j = res.json;
+				const j = res.json as { error?: string; message?: string } | undefined;
 				if (j?.error) code = j.error;
 				if (j?.message) msg = j.message;
 			} catch {
@@ -82,11 +82,16 @@ export class Client {
 		return res;
 	}
 
+	/** Sends a request and returns its JSON body. */
+	private async json<T>(method: string, path: string, body?: unknown): Promise<T> {
+		return (await this.req(method, path, body)).json as T;
+	}
+
 	/** Verifies that an SimpleSync server answers at baseUrl. */
 	async ping(): Promise<void> {
 		let ok = false;
 		try {
-			ok = (await this.req("GET", "/api/v1/ping")).json?.app === "obsisync";
+			ok = (await this.json<{ app?: string } | undefined>("GET", "/api/v1/ping"))?.app === "obsisync";
 		} catch (e) {
 			if (e instanceof ApiError && e.status === 0) throw e;
 		}
@@ -94,8 +99,8 @@ export class Client {
 	}
 
 	async login(username: string, password: string, deviceName: string): Promise<string> {
-		const res = await this.req("POST", "/api/v1/auth/login", { username, password, device_name: deviceName });
-		this.token = res.json.token;
+		const res = await this.json<{ token: string }>("POST", "/api/v1/auth/login", { username, password, device_name: deviceName });
+		this.token = res.token;
 		return this.token;
 	}
 
@@ -104,19 +109,19 @@ export class Client {
 	}
 
 	async vaults(): Promise<{ vaults: VaultInfo[]; can_create: boolean }> {
-		return (await this.req("GET", "/api/v1/vaults")).json;
+		return this.json("GET", "/api/v1/vaults");
 	}
 
 	async createVault(name: string): Promise<VaultInfo> {
-		return (await this.req("POST", "/api/v1/vaults", { name })).json;
+		return this.json("POST", "/api/v1/vaults", { name });
 	}
 
 	async changes(vaultId: number, since: number): Promise<ChangesPage> {
-		return (await this.req("GET", `/api/v1/vaults/${vaultId}/changes?since=${since}&limit=1000`)).json;
+		return this.json("GET", `/api/v1/vaults/${vaultId}/changes?since=${since}&limit=1000`);
 	}
 
 	async missing(vaultId: number, hashes: string[]): Promise<string[]> {
-		return (await this.req("POST", `/api/v1/vaults/${vaultId}/blobs/missing`, { hashes })).json.missing;
+		return (await this.json<{ missing: string[] }>("POST", `/api/v1/vaults/${vaultId}/blobs/missing`, { hashes })).missing;
 	}
 
 	async upload(vaultId: number, hash: string, data: ArrayBuffer): Promise<void> {
@@ -134,7 +139,7 @@ export class Client {
 	}
 
 	async commit(vaultId: number, ops: CommitOp[]): Promise<{ results: OpResult[]; head: number }> {
-		return (await this.req("POST", `/api/v1/vaults/${vaultId}/commit`, { ops })).json;
+		return this.json("POST", `/api/v1/vaults/${vaultId}/commit`, { ops });
 	}
 
 	wsUrl(vaultId: number): string {

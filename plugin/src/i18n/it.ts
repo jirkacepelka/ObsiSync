@@ -69,6 +69,7 @@ export const it: Dict = {
 	"engine.corrupt": "trasferimento danneggiato {hash}",
 	"engine.conflictWord": "conflitto",
 	"engine.device": "dispositivo",
+	"settings.error": "Errore",
 	"settings.language": "Lingua",
 	"settings.languageDesc": "Lingua di questo plugin.",
 	"settings.languageAuto": "Come Obsidian",

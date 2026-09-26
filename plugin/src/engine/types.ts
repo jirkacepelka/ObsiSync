@@ -29,7 +29,7 @@ export interface HttpRequest {
 
 export interface HttpResponse {
 	status: number;
-	json: any;
+	json: unknown;
 	arrayBuffer: ArrayBuffer;
 }
 

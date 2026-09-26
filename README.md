@@ -154,7 +154,7 @@ docker exec obsisync obsisync reset-password admin NewPassword123
 
 ## Network use and privacy
 
-The SimpleSync plugin communicates **only with the SimpleSync server whose address you enter**, a server you run yourself. It sends your login once to obtain a device token (the password is not stored), then uploads and downloads the files of the connected vault. There is no telemetry, no third-party service and no account with anyone else. Content is protected in transit by HTTPS when the server is reachable over HTTPS; it is not end-to-end encrypted, so whoever runs the server can read the notes stored on it.
+The SimpleSync plugin communicates **only with the SimpleSync server whose address you enter**, a server you run yourself. It sends your login once to obtain a device token (the password is not stored), then uploads and downloads the files of the connected vault. To do that it lists all files in the vault and compares them with the server; nothing is sent anywhere else. There is no telemetry, no third-party service and no account with anyone else. Content is protected in transit by HTTPS when the server is reachable over HTTPS; it is not end-to-end encrypted, so whoever runs the server can read the notes stored on it.
 
 ---
 
