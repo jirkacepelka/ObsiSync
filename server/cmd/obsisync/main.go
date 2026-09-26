@@ -30,7 +30,7 @@ func env(key, def string) string {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `ObsiSync %s
+	fmt.Fprintf(os.Stderr, `Simple Sync %s
 
 Usage:
   obsisync [serve]                         start the server
@@ -167,7 +167,7 @@ func serve(log *slog.Logger, dataDir string) error {
 		defer cancel()
 		srv.Shutdown(sctx)
 	}()
-	log.Info("ObsiSync started", "version", version, "addr", addr, "data", dataDir)
+	log.Info("Simple Sync started", "version", version, "addr", addr, "data", dataDir)
 	if n, _ := a.Store.CountUsers(ctx); n == 0 {
 		host := addr
 		if strings.HasPrefix(host, ":") {

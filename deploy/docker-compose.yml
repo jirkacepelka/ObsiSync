@@ -1,4 +1,4 @@
-# ObsiSync – the simplest setup (home network, NAS, ZimaOS over SSH).
+# Simple Sync – the simplest setup (home network, NAS, ZimaOS over SSH).
 # Start:  docker compose up -d   → then open http://<server-ip>:8080
 services:
   obsisync:

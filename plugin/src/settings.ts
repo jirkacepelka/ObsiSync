@@ -1,7 +1,7 @@
 import { App, Modal, PluginSettingTab, Setting } from "obsidian";
 import { normalizeServerUrl, type VaultInfo } from "./engine/client";
 import { LANGUAGES, t } from "./i18n";
-import type ObsiSyncPlugin from "./main";
+import type SimpleSyncPlugin from "./main";
 
 interface Choice {
 	label: string;
@@ -42,7 +42,7 @@ export class ConfirmModal extends Modal {
 	}
 }
 
-export class ObsiSyncSettingTab extends PluginSettingTab {
+export class SimpleSyncSettingTab extends PluginSettingTab {
 	private error = "";
 	private busy = false;
 	private vaults: VaultInfo[] | null = null;
@@ -51,7 +51,7 @@ export class ObsiSyncSettingTab extends PluginSettingTab {
 
 	constructor(
 		app: App,
-		private plugin: ObsiSyncPlugin,
+		private plugin: SimpleSyncPlugin,
 	) {
 		super(app, plugin);
 	}

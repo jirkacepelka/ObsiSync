@@ -85,7 +85,7 @@
   "field.vaultName": "Nombre de la bóveda",
   "field.vaultNamePlaceholder": "p. ej. Notas personales",
   "error.back": "Volver al resumen",
-  "setup.heading": "Bienvenido a ObsiSync",
+  "setup.heading": "Bienvenido a Simple Sync",
   "setup.intro": "El servidor está en marcha. Solo queda un paso: crea la cuenta de administrador. También la usarás para iniciar sesión desde Obsidian.",
   "setup.button": "Crear cuenta y empezar",
   "login.button": "Iniciar sesión",

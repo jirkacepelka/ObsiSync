@@ -85,7 +85,7 @@
   "field.vaultName": "Vault name",
   "field.vaultNamePlaceholder": "e.g. Personal notes",
   "error.back": "Back to overview",
-  "setup.heading": "Welcome to ObsiSync",
+  "setup.heading": "Welcome to Simple Sync",
   "setup.intro": "The server is running. One step left: create the administrator account. You will use it to log in from Obsidian too.",
   "setup.button": "Create account and start",
   "login.button": "Log in",

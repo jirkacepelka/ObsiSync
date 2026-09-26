@@ -55,7 +55,7 @@ export const sk: Dict = {
 	"connected.disconnectDesc": "Súbory zostanú v zariadení aj na serveri, len sa prestanú synchronizovať.",
 	"connected.disconnectButton": "Odpojiť",
 	"err.network": "Server je nedostupný ({msg})",
-	"err.notObsisync": "Na tejto adrese nebeží ObsiSync server",
+	"err.notObsisync": "Na tejto adrese nebeží Simple Sync server",
 	"err.server": "Chyba servera ({status})",
 	"err.invalid_credentials": "Nesprávne meno alebo heslo",
 	"err.rate_limited": "Príliš veľa pokusov, skús to o 15 minút",

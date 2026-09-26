@@ -1,4 +1,4 @@
-# ObsiSync for ZimaOS / CasaOS.
+# Simple Sync for ZimaOS / CasaOS.
 # App Store → "+" (Custom install / Import) → paste this file → Install.
 # Then open http://<zimaos-ip>:8080 and create the administrator.
 name: obsisync
@@ -39,7 +39,7 @@ x-casaos:
   developer: jirkacepelka
   category: Utilities
   title:
-    en_us: ObsiSync
+    en_us: Simple Sync
   tagline:
     en_us: Simple self-hosted sync for Obsidian
   description:

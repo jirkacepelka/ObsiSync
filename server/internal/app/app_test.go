@@ -393,14 +393,14 @@ func TestWebGUI(t *testing.T) {
 	b := &browser{e: e, c: &http.Client{Jar: jar}}
 
 	// Fresh server redirects to setup.
-	if _, body := b.get("/"); !strings.Contains(body, "Welcome to ObsiSync") {
+	if _, body := b.get("/"); !strings.Contains(body, "Welcome to Simple Sync") {
 		t.Fatal("setup page not shown")
 	}
 	if _, body := b.post("/setup", url.Values{"username": {"admin"}, "password": {"heslo1234"}, "password2": {"heslo1234"}}); !strings.Contains(body, "The server is ready") {
 		t.Fatalf("setup failed: %s", body)
 	}
 	// Setup cannot run twice.
-	if _, body := b.get("/setup"); strings.Contains(body, "Welcome to ObsiSync") {
+	if _, body := b.get("/setup"); strings.Contains(body, "Welcome to Simple Sync") {
 		t.Fatal("setup reachable after first user")
 	}
 

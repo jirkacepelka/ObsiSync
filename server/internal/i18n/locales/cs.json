@@ -85,7 +85,7 @@
   "field.vaultName": "Název vaultu",
   "field.vaultNamePlaceholder": "např. Osobní poznámky",
   "error.back": "Zpět na přehled",
-  "setup.heading": "Vítej v ObsiSync",
+  "setup.heading": "Vítej v Simple Sync",
   "setup.intro": "Server běží. Zbývá jediný krok: vytvoř si administrátorský účet. Tímto účtem se pak můžeš přihlásit i v Obsidianu.",
   "setup.button": "Vytvořit účet a začít",
   "login.button": "Přihlásit",

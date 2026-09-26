@@ -63,7 +63,7 @@ export const en = {
 	"connected.disconnectButton": "Disconnect",
 
 	"err.network": "Server unreachable ({msg})",
-	"err.notObsisync": "No ObsiSync server is running at this address",
+	"err.notObsisync": "No Simple Sync server is running at this address",
 	"err.server": "Server error ({status})",
 	"err.invalid_credentials": "Wrong name or password",
 	"err.rate_limited": "Too many attempts, try again in 15 minutes",

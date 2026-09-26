@@ -5,7 +5,7 @@ import { makeIgnore } from "./engine/ignore";
 import type { Http, SyncState } from "./engine/types";
 import { setLanguage, t } from "./i18n";
 import { ObsidianFS } from "./obsidian-fs";
-import { ConfirmModal, ObsiSyncSettingTab } from "./settings";
+import { ConfirmModal, SimpleSyncSettingTab } from "./settings";
 
 export interface Settings {
 	serverUrl: string;
@@ -41,7 +41,7 @@ const obsidianHttp: Http = async (req) => {
 	return { status: res.status, json, arrayBuffer: res.arrayBuffer };
 };
 
-export default class ObsiSyncPlugin extends Plugin {
+export default class SimpleSyncPlugin extends Plugin {
 	settings: Settings = { ...DEFAULTS };
 	status: Status = { kind: "off", text: t("status.off") };
 	onStatusChange?: () => void;
@@ -71,7 +71,7 @@ export default class ObsiSyncPlugin extends Plugin {
 	async onload() {
 		this.settings = { ...DEFAULTS, ...(await this.loadData()) };
 		setLanguage(this.settings.language);
-		this.addSettingTab(new ObsiSyncSettingTab(this.app, this));
+		this.addSettingTab(new SimpleSyncSettingTab(this.app, this));
 
 		this.statusEl = this.addStatusBarItem();
 		this.statusEl.addClass("obsisync-status");

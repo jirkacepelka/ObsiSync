@@ -64,7 +64,7 @@ export const cs: Dict = {
 	"connected.disconnectButton": "Odpojit",
 
 	"err.network": "Server je nedostupný ({msg})",
-	"err.notObsisync": "Na této adrese neběží ObsiSync server",
+	"err.notObsisync": "Na této adrese neběží Simple Sync server",
 	"err.server": "Chyba serveru ({status})",
 	"err.invalid_credentials": "Špatné jméno nebo heslo",
 	"err.rate_limited": "Příliš mnoho pokusů, zkus to za 15 minut",

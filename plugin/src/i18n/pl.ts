@@ -55,7 +55,7 @@ export const pl: Dict = {
 	"connected.disconnectDesc": "Pliki zostaną na urządzeniu i na serwerze, po prostu przestaną się synchronizować.",
 	"connected.disconnectButton": "Rozłącz",
 	"err.network": "Serwer niedostępny ({msg})",
-	"err.notObsisync": "Pod tym adresem nie działa serwer ObsiSync",
+	"err.notObsisync": "Pod tym adresem nie działa serwer Simple Sync",
 	"err.server": "Błąd serwera ({status})",
 	"err.invalid_credentials": "Nieprawidłowa nazwa użytkownika lub hasło",
 	"err.rate_limited": "Zbyt wiele prób, spróbuj ponownie za 15 minut",

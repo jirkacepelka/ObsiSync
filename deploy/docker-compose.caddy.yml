@@ -1,4 +1,4 @@
-# ObsiSync on a VPS with automatic HTTPS (Let's Encrypt via Caddy).
+# Simple Sync on a VPS with automatic HTTPS (Let's Encrypt via Caddy).
 # 1) Point a DNS A record (e.g. sync.example.com) at the VPS IP address.
 # 2) DOMAIN=sync.example.com docker compose -f docker-compose.caddy.yml up -d
 # 3) Open https://sync.example.com and create the administrator.

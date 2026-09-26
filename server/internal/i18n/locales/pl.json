@@ -85,7 +85,7 @@
   "field.vaultName": "Nazwa sejfu",
   "field.vaultNamePlaceholder": "np. Notatki osobiste",
   "error.back": "Powrót do przeglądu",
-  "setup.heading": "Witaj w ObsiSync",
+  "setup.heading": "Witaj w Simple Sync",
   "setup.intro": "Serwer działa. Został jeden krok: utwórz konto administratora. Użyjesz go też do logowania w Obsidianie.",
   "setup.button": "Utwórz konto i zacznij",
   "login.button": "Zaloguj",

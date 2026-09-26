@@ -85,7 +85,7 @@
   "field.vaultName": "Nom du coffre",
   "field.vaultNamePlaceholder": "p. ex. Notes personnelles",
   "error.back": "Retour à l'aperçu",
-  "setup.heading": "Bienvenue dans ObsiSync",
+  "setup.heading": "Bienvenue dans Simple Sync",
   "setup.intro": "Le serveur tourne. Il reste une étape : crée le compte administrateur. Tu l'utiliseras aussi pour te connecter depuis Obsidian.",
   "setup.button": "Créer le compte et commencer",
   "login.button": "Se connecter",

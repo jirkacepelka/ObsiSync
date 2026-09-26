@@ -55,7 +55,7 @@ export const es: Dict = {
 	"connected.disconnectDesc": "Los archivos se quedan en el dispositivo y en el servidor; solo dejan de sincronizarse.",
 	"connected.disconnectButton": "Desconectar",
 	"err.network": "Servidor inaccesible ({msg})",
-	"err.notObsisync": "No hay ningún servidor ObsiSync en esta dirección",
+	"err.notObsisync": "No hay ningún servidor Simple Sync en esta dirección",
 	"err.server": "Error del servidor ({status})",
 	"err.invalid_credentials": "Nombre o contraseña incorrectos",
 	"err.rate_limited": "Demasiados intentos, vuelve a intentarlo en 15 minutos",
